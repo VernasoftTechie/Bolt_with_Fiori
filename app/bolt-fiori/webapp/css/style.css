@@ -1,0 +1,65 @@
+/* Bolt with Fiori - light touch on top of SAP Horizon; theme parameters
+   keep both light and dark Horizon themes readable. */
+
+.boltPage .sapMPageHeader,
+.boltTopBar { box-shadow: none; }
+
+.boltBrandIcon { font-size: 1.25rem; color: var(--sapBrandColor); margin-right: 0.5rem; }
+.boltBrand { font-weight: 700; }
+.boltCustomer {
+  margin-left: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.75rem;
+  background: var(--sapInformationBackgroundColor);
+  color: var(--sapInformativeTextColor);
+  font-size: 0.8125rem;
+}
+.boltChip { margin-right: 0.5rem; }
+
+.boltLive { margin-right: 0.5rem; }
+.boltLive .sapMObjStatusText { font-weight: 700; letter-spacing: 0.06em; }
+.boltLive.sapMObjStatusSuccess .sapMObjStatusIcon { animation: boltPulse 1.6s ease-in-out infinite; }
+@keyframes boltPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .boltLive .sapMObjStatusIcon { animation: none !important; } }
+
+.boltTiles { gap: 0.75rem; }
+.boltTile { margin: 0 !important; cursor: pointer; }
+.boltTileAttention { border-left: 0.1875rem solid var(--sapCriticalColor); }
+
+.boltToolbar { margin-bottom: 0.5rem; }
+.boltTable .sapMListTblCell { vertical-align: middle; }
+
+.boltConfig { max-width: 72rem; }
+.boltPanel { margin-bottom: 1rem; }
+.boltFields > .sapMLabel { margin-top: 0.75rem; }
+.boltFields .sapMInputBase { max-width: 32rem; }
+.boltHint { color: var(--sapContent_LabelColor); font-size: 0.8125rem; display: block; margin-top: 0.25rem; }
+.boltMuted { color: var(--sapContent_LabelColor); font-size: 0.8125rem; }
+.boltInlineMsg { margin-left: 0.75rem; color: var(--sapContent_LabelColor); }
+.boltSaveBar { margin: 0 0 1.25rem 0; }
+
+.boltObjectHeader { padding-bottom: 0.5rem; }
+.boltStopBanner {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--sapErrorBackground);
+  border: 1px solid var(--sapErrorBorderColor);
+}
+.boltNextStep { border-left: 0.25rem solid var(--sapCriticalColor); }
+.boltNote { display: block; margin: 0.25rem 0 0.5rem 0; }
+.boltButtons { gap: 0.5rem; margin: 0.5rem 0; }
+.boltHalf { min-width: 22rem; flex: 1 1 22rem; margin-right: 1rem; }
+
+.boltTimeline .sapMLIB { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.boltEntry { width: 100%; padding: 0.25rem 0.5rem; }
+.boltEntryIcon { margin-right: 0.5rem; color: var(--sapContent_IconColor); }
+.boltEntryText { display: block; margin-top: 0.25rem; }
+.boltEntryText p { margin: 0.25rem 0; }
+.boltEntryText code, .boltNote code {
+  font-family: var(--sapFontFamilyMono, monospace);
+  background: var(--sapNeutralBackground);
+  padding: 0 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.boltHelp { display: block; max-width: 52rem; padding: 0.5rem 1rem 2rem; line-height: 1.5; }

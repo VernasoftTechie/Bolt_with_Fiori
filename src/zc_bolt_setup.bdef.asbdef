@@ -1,0 +1,12 @@
+projection;
+strict ( 2 );
+
+define behavior for ZC_BOLT_SETUP alias Setup
+{
+  use update;
+
+  use action initialize;
+  use action testGitHub;
+  use action testAi;
+  use action setAiKey;
+}

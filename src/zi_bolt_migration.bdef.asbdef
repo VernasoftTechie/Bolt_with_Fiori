@@ -1,0 +1,118 @@
+managed implementation in class zbp_i_bolt_migration unique;
+strict ( 2 );
+
+define behavior for ZI_BOLT_MIGRATION alias Migration
+persistent table zbolt_mig
+lock master
+authorization master ( global )
+{
+  internal create;
+  internal update;
+
+  field ( numbering : managed, readonly ) MigUuid;
+  field ( readonly ) SerialNo, FormName, FormDescription, SystemId, SapClient, BranchName, FormSlug,
+                     PushStatus, PushMessage, PushAttempts, PushedAt, FilesPushed, CommitSha,
+                     Status, StatusLabel, WaitingOn, StatusNote, StopFlag, ClaimedBy, StatusUpdated,
+                     StatusSha, LastSyncAt, Complexity, ComplexityText, Withdrawn,
+                     CreatedBy, CreatedAt, ChangedBy, ChangedAt, LocalLastChanged;
+
+  static action commitSelection parameter ZA_BOLT_COMMIT_P result [0..*] $self;
+  static action refreshAll result [0..*] $self;
+  static action importFromGitHub result [0..*] $self;
+
+  action pushToGitHub result [1] $self;
+  action refreshStatus result [1] $self;
+  action confirmManual parameter ZA_BOLT_NOTE_P result [1] $self;
+  action raiseConcern parameter ZA_BOLT_CONCERN_P result [1] $self;
+  action setStop parameter ZA_BOLT_STOP_P result [1] $self;
+  action addReferenceFile parameter ZA_BOLT_FILE_P result [1] $self;
+  action withdraw parameter ZA_BOLT_WITHDRAW_P result [1] $self;
+  action aiSummary result [1] ZA_BOLT_TEXT_R;
+
+  association _Log { internal create; }
+  association _File { internal create; }
+
+  mapping for zbolt_mig
+  {
+    MigUuid          = mig_uuid;
+    SerialNo         = serial_no;
+    FormName         = form_name;
+    FormDescription  = form_description;
+    SystemId         = system_id;
+    SapClient        = sap_client;
+    BranchName       = branch_name;
+    FormSlug         = form_slug;
+    PushStatus       = push_status;
+    PushMessage      = push_message;
+    PushAttempts     = push_attempts;
+    PushedAt         = pushed_at;
+    FilesPushed      = files_pushed;
+    CommitSha        = commit_sha;
+    Status           = status;
+    StatusLabel      = status_label;
+    WaitingOn        = waiting_on;
+    StatusNote       = status_note;
+    StopFlag         = stop_flag;
+    ClaimedBy        = claimed_by;
+    StatusUpdated    = status_updated;
+    StatusSha        = status_sha;
+    LastSyncAt       = last_sync_at;
+    Complexity       = complexity;
+    ComplexityText   = complexity_text;
+    Withdrawn        = withdrawn;
+    CreatedBy        = created_by;
+    CreatedAt        = created_at;
+    ChangedBy        = changed_by;
+    ChangedAt        = changed_at;
+    LocalLastChanged = local_last_changed;
+  }
+}
+
+define behavior for ZI_BOLT_MIGLOG alias MigrationLog
+persistent table zbolt_miglog
+lock dependent by _Migration
+authorization dependent by _Migration
+{
+  internal delete;
+
+  field ( numbering : managed, readonly ) LogUuid;
+  field ( readonly ) MigUuid, LogSource, SeqNo, EntryAt, Heading, Actor, LogText, CreatedAt;
+
+  association _Migration;
+
+  mapping for zbolt_miglog
+  {
+    MigUuid   = mig_uuid;
+    LogUuid   = log_uuid;
+    LogSource = log_source;
+    SeqNo     = seq_no;
+    EntryAt   = entry_at;
+    Heading   = heading;
+    Actor     = actor;
+    LogText   = log_text;
+    CreatedAt = created_at;
+  }
+}
+
+define behavior for ZI_BOLT_MIGFILE alias MigrationFile
+persistent table zbolt_migfile
+lock dependent by _Migration
+authorization dependent by _Migration
+{
+  field ( numbering : managed, readonly ) FileUuid;
+  field ( readonly ) MigUuid, FilePath, FileName, Kind, SizeBytes, PushedAt, CreatedBy;
+
+  association _Migration;
+
+  mapping for zbolt_migfile
+  {
+    MigUuid   = mig_uuid;
+    FileUuid  = file_uuid;
+    FilePath  = file_path;
+    FileName  = file_name;
+    Kind      = kind;
+    SizeBytes = size_bytes;
+    PushedAt  = pushed_at;
+    CreatedBy = created_by;
+  }
+}

@@ -1,0 +1,178 @@
+<mvc:View
+  controllerName="vernasoft.boltfiori.controller.Detail"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:core="sap.ui.core"
+  xmlns:u="sap.ui.unified"
+  xmlns="sap.m"
+  height="100%"
+  displayBlock="true">
+
+  <!-- One migration: the same status board as Bolt Console's Workspace -
+       status, waiting-on, the client's response buttons, stop/resume, the
+       full status-file timeline from the branch, plus this app's own log. -->
+  <Page id="detailPage" title="{d>/FormName}" showNavButton="true" navButtonPress=".onNavBack"
+        busy="{d>/busy}" busyIndicatorDelay="0" class="boltPage">
+    <headerContent>
+      <Button text="{i18n>retrySend}" icon="sap-icon://upload-to-cloud" press=".onRetrySend"
+              visible="{= ${d>/PushStatus} === 'FAILED' || ${d>/PushStatus} === 'PENDING' }"/>
+      <Button text="{i18n>aiSummary}" icon="sap-icon://da-2" press=".onAiSummary"
+              visible="{= ${d>/PushStatus} === 'PUSHED' &amp;&amp; ${app>/setup/AiProvider} !== 'NONE' }"/>
+      <Button icon="sap-icon://refresh" tooltip="{i18n>refresh}" press=".onRefresh"/>
+      <Button text="{i18n>withdraw}" icon="sap-icon://undo" type="Reject" press=".onWithdraw"
+              visible="{= ${app>/isAdmin} &amp;&amp; ${d>/Withdrawn} !== 'X' }"/>
+    </headerContent>
+
+    <content>
+      <ObjectHeader title="{d>/FormName}" number="{= 'No. ' + ${d>/SerialNo} }" responsive="true"
+                    titleLevel="H2" class="boltObjectHeader" backgroundDesign="Transparent">
+        <statuses>
+          <ObjectStatus text="{d>/statusText}" state="{d>/statusState}" inverted="true"/>
+          <ObjectStatus text="{= ${d>/Complexity} ? 'Complexity: ' + ${d>/Complexity} : '' }"
+                        state="{path: 'd>/Complexity', formatter: '.formatter.complexityState'}"
+                        tooltip="{d>/ComplexityText}"/>
+        </statuses>
+        <attributes>
+          <ObjectAttribute title="{i18n>colDescription}" text="{d>/FormDescription}"/>
+          <ObjectAttribute title="{i18n>colSystem}" text="{d>/systemText}"/>
+          <ObjectAttribute title="{i18n>branch}" text="{d>/BranchName}" active="{= !!${d>/branchUrl} }" press=".onOpenBranch"/>
+          <ObjectAttribute title="{i18n>pickedUpBy}" text="{d>/ClaimedBy}" visible="{= !!${d>/ClaimedBy} }"/>
+          <ObjectAttribute title="{i18n>selectedBy}" text="{d>/CreatedBy} - {path: 'd>/CreatedAt', formatter: '.formatter.dateTime'}"/>
+          <ObjectAttribute title="{i18n>lastRead}" text="{path: 'd>/LastSyncAt', formatter: '.formatter.dateTime'}"/>
+        </attributes>
+      </ObjectHeader>
+
+      <MessageStrip visible="{= ${d>/PushStatus} === 'FAILED' }" type="Error" showIcon="true" text="{d>/PushMessage}"
+                    class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom"/>
+      <MessageStrip visible="{= ${d>/PushStatus} === 'PENDING' }" type="Information" showIcon="true" text="{i18n>pendingText}"
+                    class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom"/>
+      <Text text="{i18n>statusBoardHint}" class="boltHint sapUiSmallMarginBeginEnd"/>
+
+      <!-- Stopped -->
+      <VBox visible="{= ${d>/StopFlag} === 'X' }" class="boltStopBanner sapUiSmallMargin">
+        <Title text="{i18n>stopped}" level="H3"/>
+        <Text text="{i18n>stoppedText}"/>
+        <Button text="{i18n>resume}" type="Emphasized" press=".onResume" class="sapUiTinyMarginTop"/>
+      </VBox>
+
+      <!-- Waiting on the client: confirm / problem / question / change -->
+      <Panel visible="{d>/needsClient}" class="boltPanel boltNextStep sapUiSmallMargin">
+        <headerToolbar>
+          <Toolbar>
+            <core:Icon src="sap-icon://user-edit"/>
+            <Title text="{= ${i18n>waitingOnYou} }"/>
+          </Toolbar>
+        </headerToolbar>
+        <FormattedText htmlText="{path: 'd>/StatusNote', formatter: '.formatter.markdown'}" class="boltNote"/>
+        <TextArea value="{d>/input/text}" rows="3" width="100%" growing="true"
+                  placeholder="{i18n>notePlaceholder}" class="sapUiTinyMarginTop"/>
+        <HBox alignItems="Center">
+          <u:FileUploader id="confirmFile" buttonText="{i18n>attachFile}" change=".onFileChosen" sameFilenameAllowed="true"
+                          placeholder="{i18n>attachOptional}" width="22rem">
+            <u:customData><core:CustomData key="slot" value="input"/></u:customData>
+          </u:FileUploader>
+        </HBox>
+        <HBox wrap="Wrap" class="boltButtons">
+          <Button text="{i18n>confirmDone}" type="Emphasized" icon="sap-icon://accept" press=".onConfirm"/>
+          <Button text="{i18n>reportProblem}" press=".onConcern" enabled="{= !!${d>/input/text} || !!${d>/input/fileName} }">
+            <customData><core:CustomData key="kind" value="problem"/></customData>
+          </Button>
+          <Button text="{i18n>askQuestion}" press=".onConcern" enabled="{= !!${d>/input/text} || !!${d>/input/fileName} }">
+            <customData><core:CustomData key="kind" value="question"/></customData>
+          </Button>
+          <Button text="{i18n>requestChange}" press=".onConcern" enabled="{= !!${d>/input/text} || !!${d>/input/fileName} }">
+            <customData><core:CustomData key="kind" value="change"/></customData>
+          </Button>
+        </HBox>
+        <Text text="{i18n>engineerContinues}" class="boltHint"/>
+      </Panel>
+
+      <!-- Not waiting on the client: raise a concern (always open, also after completion) -->
+      <Panel visible="{= !${d>/needsClient} &amp;&amp; ${d>/PushStatus} === 'PUSHED' }" headerText="{i18n>raiseConcern}"
+             class="boltPanel sapUiSmallMargin">
+        <Text text="{= ${d>/Status} === 'completed' ? ${i18n>completedConcernHint} : ${i18n>concernHint} }" class="boltHint"/>
+        <TextArea value="{d>/input/text}" rows="3" width="100%" growing="true" placeholder="{i18n>concernPlaceholder}"/>
+        <HBox alignItems="Center" wrap="Wrap" class="boltButtons">
+          <u:FileUploader buttonText="{i18n>attachFile}" change=".onFileChosen" sameFilenameAllowed="true"
+                          placeholder="{i18n>attachOptional}" width="22rem">
+            <u:customData><core:CustomData key="slot" value="input"/></u:customData>
+          </u:FileUploader>
+          <Button text="{i18n>send}" type="Emphasized" press=".onConcern" enabled="{= !!${d>/input/text} || !!${d>/input/fileName} }">
+            <customData><core:CustomData key="kind" value="concern"/></customData>
+          </Button>
+        </HBox>
+      </Panel>
+
+      <!-- Stop + extra reference files -->
+      <HBox wrap="Wrap" class="sapUiSmallMarginBeginEnd" visible="{= ${d>/PushStatus} === 'PUSHED' &amp;&amp; ${d>/Withdrawn} !== 'X' }">
+        <Panel headerText="{i18n>addReferenceFile}" class="boltPanel boltHalf">
+          <Text text="{i18n>addReferenceHint}" class="boltHint"/>
+          <HBox alignItems="Center" wrap="Wrap">
+            <u:FileUploader buttonText="{i18n>chooseFile}" change=".onFileChosen" sameFilenameAllowed="true" width="20rem">
+              <u:customData><core:CustomData key="slot" value="reference"/></u:customData>
+            </u:FileUploader>
+            <Button text="{i18n>upload}" press=".onUploadReference" enabled="{= !!${d>/reference/fileName} }"/>
+          </HBox>
+        </Panel>
+        <Panel headerText="{i18n>stopTitle}" class="boltPanel boltHalf" visible="{= ${d>/StopFlag} !== 'X' }">
+          <Input value="{d>/stopNote}" placeholder="{i18n>stopReason}"/>
+          <Button text="{i18n>stopMigration}" type="Reject" press=".onStop" class="sapUiTinyMarginTop"/>
+        </Panel>
+      </HBox>
+
+      <IconTabBar class="sapUiResponsiveContentPadding" expandable="false">
+        <items>
+          <IconTabFilter text="{i18n>activity}" count="{= ${d>/timeline}.length }" icon="sap-icon://history">
+            <List items="{path: 'd>/timeline', templateShareable: false}" noDataText="{i18n>notPickedUp}" class="boltTimeline">
+              <CustomListItem>
+                <VBox class="boltEntry">
+                  <HBox justifyContent="SpaceBetween" alignItems="Center">
+                    <HBox alignItems="Center">
+                      <core:Icon src="{= ${d>Actor} === 'client' ? 'sap-icon://customer' : (${d>Actor} === 'app' ? 'sap-icon://cloud' : 'sap-icon://developer-settings') }"
+                                 class="boltEntryIcon"/>
+                      <Title text="{d>Heading}" level="H4"/>
+                    </HBox>
+                    <Text text="{path: 'd>EntryAt', formatter: '.formatter.dateTime'}" class="boltMuted"/>
+                  </HBox>
+                  <FormattedText htmlText="{path: 'd>LogText', formatter: '.formatter.markdown'}" class="boltEntryText"/>
+                </VBox>
+              </CustomListItem>
+            </List>
+          </IconTabFilter>
+          <IconTabFilter text="{i18n>appLog}" count="{= ${d>/appLog}.length }" icon="sap-icon://list">
+            <List items="{path: 'd>/appLog', templateShareable: false}" noDataText="{i18n>noAppLog}">
+              <CustomListItem>
+                <VBox class="boltEntry">
+                  <HBox justifyContent="SpaceBetween">
+                    <Title text="{d>Heading}" level="H5"/>
+                    <Text text="{path: 'd>EntryAt', formatter: '.formatter.dateTime'}" class="boltMuted"/>
+                  </HBox>
+                  <FormattedText htmlText="{path: 'd>LogText', formatter: '.formatter.markdown'}" class="boltEntryText"/>
+                </VBox>
+              </CustomListItem>
+            </List>
+          </IconTabFilter>
+          <IconTabFilter text="{i18n>files}" count="{= ${d>/files}.length }" icon="sap-icon://attachment">
+            <Table items="{path: 'd>/files', templateShareable: false}" noDataText="{i18n>noFiles}">
+              <columns>
+                <Column><Text text="{i18n>colFile}"/></Column>
+                <Column width="7rem"><Text text="{i18n>colKind}"/></Column>
+                <Column width="7rem"><Text text="{i18n>colSize}"/></Column>
+                <Column width="11rem"><Text text="{i18n>colPushed}"/></Column>
+              </columns>
+              <items>
+                <ColumnListItem>
+                  <cells>
+                    <Link text="{d>FilePath}" href="{d>url}" target="_blank"/>
+                    <Text text="{d>Kind}"/>
+                    <Text text="{path: 'd>SizeBytes', formatter: '.formatter.bytes'}"/>
+                    <Text text="{path: 'd>PushedAt', formatter: '.formatter.dateTime'}"/>
+                  </cells>
+                </ColumnListItem>
+              </items>
+            </Table>
+          </IconTabFilter>
+        </items>
+      </IconTabBar>
+    </content>
+  </Page>
+</mvc:View>

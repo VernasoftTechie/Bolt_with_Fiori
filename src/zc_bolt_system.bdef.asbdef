@@ -1,0 +1,11 @@
+projection;
+strict ( 2 );
+
+define behavior for ZC_BOLT_SYSTEM alias SourceSystem
+{
+  use create;
+  use update;
+  use delete;
+
+  use action testConnection;
+}

@@ -1,0 +1,11 @@
+@EndUserText.label: 'Bolt with Fiori - Smart Form migration'
+define service ZBOLT_UI {
+  expose ZC_BOLT_MIGRATION  as Migration;
+  expose ZC_BOLT_MIGLOG     as MigrationLog;
+  expose ZC_BOLT_MIGFILE    as MigrationFile;
+  expose ZC_BOLT_SETUP      as Setup;
+  expose ZC_BOLT_SYSTEM     as SourceSystem;
+  expose ZCE_BOLT_SMARTFORM as SmartForm;
+  expose ZCE_BOLT_SRC_FORM  as SourceForm;
+  expose ZCE_BOLT_SRC_FILE  as SourceFile;
+}

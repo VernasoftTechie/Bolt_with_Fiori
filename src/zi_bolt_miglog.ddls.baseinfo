@@ -1,0 +1,10 @@
+{
+  "BASEINFO": {
+    "FROM": [
+      "ZBOLT_MIGLOG"
+    ],
+    "ASSOCIATED": [
+      "ZI_BOLT_MIGRATION"
+    ]
+  }
+}

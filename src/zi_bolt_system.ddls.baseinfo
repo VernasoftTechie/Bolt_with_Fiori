@@ -1,0 +1,7 @@
+{
+  "BASEINFO": {
+    "FROM": [
+      "ZBOLT_SYSTEM"
+    ]
+  }
+}

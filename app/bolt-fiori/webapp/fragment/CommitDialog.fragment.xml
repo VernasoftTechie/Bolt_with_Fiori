@@ -1,0 +1,41 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+  <!-- Step 1 "confirm": the selected forms, commit or cancel.
+       Step 2 "sending": each form is sent to GitHub one by one, live.
+       Step 3 "done": result per form, then on to the Migration tab. -->
+  <Dialog id="commitDialog" title="{= ${view>/commit/phase} === 'confirm' ? ${i18n>commitTitle} : ${i18n>sendingTitle} }"
+          contentWidth="46rem" draggable="true" resizable="true" escapeHandler=".onCommitEscape">
+    <content>
+      <VBox class="sapUiSmallMargin">
+        <Text text="{= ${view>/commit/phase} === 'confirm' ? ${i18n>commitIntro} : ${i18n>sendingIntro} }"/>
+        <Text text="{= ${i18n>sourceSystem} + ': ' + ${view>/systemId} }" class="boltMuted sapUiTinyMarginTop"/>
+      </VBox>
+      <Table items="{path: 'view>/commit/items', templateShareable: false}" class="boltTable">
+        <columns>
+          <Column width="13rem"><Text text="{i18n>colForm}"/></Column>
+          <Column><Text text="{i18n>colDescription}"/></Column>
+          <Column width="16rem"><Text text="{i18n>colResult}"/></Column>
+        </columns>
+        <items>
+          <ColumnListItem>
+            <cells>
+              <ObjectIdentifier title="{view>FormName}" text="{= ${view>SerialNo} ? 'No. ' + ${view>SerialNo} : '' }"/>
+              <Text text="{view>Description}"/>
+              <HBox alignItems="Center">
+                <BusyIndicator size="1rem" visible="{= ${view>state} === 'busy' }" class="sapUiTinyMarginEnd"/>
+                <ObjectStatus text="{view>resultText}" state="{view>resultState}"/>
+              </HBox>
+            </cells>
+          </ColumnListItem>
+        </items>
+      </Table>
+    </content>
+    <beginButton>
+      <Button text="{= ${view>/commit/phase} === 'confirm' ? ${i18n>commitSelection} : ${i18n>goToMigration} }"
+              type="Emphasized" press=".onCommitPrimary" enabled="{= ${view>/commit/phase} !== 'sending' }"/>
+    </beginButton>
+    <endButton>
+      <Button text="{= ${view>/commit/phase} === 'confirm' ? ${i18n>cancel} : ${i18n>close} }"
+              press=".onCommitClose" enabled="{= ${view>/commit/phase} !== 'sending' }"/>
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>

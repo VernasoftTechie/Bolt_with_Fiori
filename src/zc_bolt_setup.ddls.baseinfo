@@ -1,0 +1,10 @@
+{
+  "BASEINFO": {
+    "FROM": [
+      "ZI_BOLT_SETUP"
+    ],
+    "BASE": [
+      "ZI_BOLT_SETUP"
+    ]
+  }
+}

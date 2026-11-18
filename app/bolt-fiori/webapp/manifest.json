@@ -1,0 +1,97 @@
+{
+  "_version": "1.58.0",
+  "sap.app": {
+    "id": "vernasoft.boltfiori",
+    "type": "application",
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [""],
+      "fallbackLocale": ""
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "applicationVersion": { "version": "1.0.0" },
+    "dataSources": {
+      "mainService": {
+        "uri": "/sap/opu/odata4/sap/zbolt_ui_o4/srvd/sap/zbolt_ui/0001/",
+        "type": "OData",
+        "settings": { "odataVersion": "4.0" }
+      }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "boltMigration-manage": {
+          "semanticObject": "BoltMigration",
+          "action": "manage",
+          "title": "{{appTitle}}",
+          "subTitle": "{{appSubTitle}}",
+          "icon": "sap-icon://journey-change",
+          "signature": { "parameters": {}, "additionalParameters": "allowed" }
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": { "icon": "sap-icon://journey-change" },
+    "deviceTypes": { "desktop": true, "tablet": true, "phone": false }
+  },
+  "sap.ui5": {
+    "flexEnabled": false,
+    "rootView": {
+      "viewName": "vernasoft.boltfiori.view.App",
+      "type": "XML",
+      "id": "app",
+      "async": true
+    },
+    "dependencies": {
+      "minUI5Version": "1.120.0",
+      "libs": {
+        "sap.ui.core": {},
+        "sap.m": {},
+        "sap.ui.unified": {}
+      }
+    },
+    "contentDensities": { "compact": true, "cozy": true },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "vernasoft.boltfiori.i18n.i18n",
+          "supportedLocales": [""],
+          "fallbackLocale": ""
+        }
+      },
+      "odata": {
+        "dataSource": "mainService",
+        "preload": false,
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": false,
+          "earlyRequests": false
+        }
+      }
+    },
+    "resources": {
+      "css": [{ "uri": "css/style.css" }]
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "viewType": "XML",
+        "path": "vernasoft.boltfiori.view",
+        "controlId": "app",
+        "controlAggregation": "pages",
+        "async": true
+      },
+      "routes": [
+        { "name": "dashboard", "pattern": ":tab:", "target": "dashboard" },
+        { "name": "detail", "pattern": "migration/{migUuid}", "target": "detail" }
+      ],
+      "targets": {
+        "dashboard": { "viewName": "Dashboard", "viewId": "dashboard", "viewLevel": 1 },
+        "detail": { "viewName": "Detail", "viewId": "detail", "viewLevel": 2 }
+      }
+    }
+  }
+}
