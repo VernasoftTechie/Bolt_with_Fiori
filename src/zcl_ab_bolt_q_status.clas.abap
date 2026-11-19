@@ -125,11 +125,17 @@ CLASS zcl_ab_bolt_q_status IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
+    " RAP terminates when a query option the request contains is not read by the
+    " provider - the UI5 model always sends $skip/$top (and may send $orderby).
+    DATA(lt_sort) = io_request->get_sort_elements( ).
+    DATA(lo_paging) = io_request->get_paging( ).
+    DATA(lv_offset) = lo_paging->get_offset( ).
+    DATA(lv_size)   = lo_paging->get_page_size( ).
+    DATA(lt_order) = VALUE abap_sortorder_tab( FOR ls_sort IN lt_sort
+                                               ( name = ls_sort-element_name descending = ls_sort-descending ) ).
+
     IF lv_entity = 'ZAB_CDS_CE_BOLT_TIMELN'.
       " Newest first unless the screen asks otherwise (the web app shows newest first).
-      DATA(lt_sort) = io_request->get_sort_elements( ).
-      DATA(lt_order) = VALUE abap_sortorder_tab( FOR ls_sort IN lt_sort
-                                                 ( name = ls_sort-element_name descending = ls_sort-descending ) ).
       IF lt_order IS INITIAL.
         lt_order = VALUE #( ( name = `ENTRYNO` descending = abap_true ) ).
       ENDIF.
@@ -138,13 +144,30 @@ CLASS zcl_ab_bolt_q_status IMPLEMENTATION.
         io_response->set_total_number_of_records( lines( lt_timeline ) ).
       ENDIF.
       IF io_request->is_data_requested( ) = abap_true.
+        IF lv_size <> if_rap_query_paging=>page_size_unlimited AND lv_size >= 0.
+          DATA(lv_end) = lv_offset + lv_size + 1.
+          DELETE lt_timeline FROM lv_end.
+        ENDIF.
+        IF lv_offset > 0.
+          DELETE lt_timeline FROM 1 TO lv_offset.
+        ENDIF.
         io_response->set_data( lt_timeline ).
       ENDIF.
     ELSE.
+      IF lt_order IS NOT INITIAL.
+        SORT lt_status BY (lt_order).
+      ENDIF.
       IF io_request->is_total_numb_of_rec_requested( ) = abap_true.
         io_response->set_total_number_of_records( lines( lt_status ) ).
       ENDIF.
       IF io_request->is_data_requested( ) = abap_true.
+        IF lv_size <> if_rap_query_paging=>page_size_unlimited AND lv_size >= 0.
+          DATA(lv_end_s) = lv_offset + lv_size + 1.
+          DELETE lt_status FROM lv_end_s.
+        ENDIF.
+        IF lv_offset > 0.
+          DELETE lt_status FROM 1 TO lv_offset.
+        ENDIF.
         io_response->set_data( lt_status ).
       ENDIF.
     ENDIF.
