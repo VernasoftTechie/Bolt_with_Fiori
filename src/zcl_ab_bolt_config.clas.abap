@@ -146,6 +146,18 @@ CLASS zcl_ab_bolt_config DEFINITION
       IMPORTING iv_category      TYPE zabt_bolt_lib-lib_category
       RETURNING VALUE(rv_folder) TYPE string.
 
+    "! Message variables for RAP messages with standard message 00(001)
+    "! ("&1&2&3&4..."): new_message_with_text keeps only 50 characters, this
+    "! carries up to 200. A blank at a 50-character boundary becomes a
+    "! non-breaking space (it would be lost in the substitution); longer texts
+    "! end with an ellipsis.
+    CLASS-METHODS msg_vars
+      IMPORTING iv_text TYPE csequence
+      EXPORTING ev_v1   TYPE symsgv
+                ev_v2   TYPE symsgv
+                ev_v3   TYPE symsgv
+                ev_v4   TYPE symsgv.
+
     "! Removes blanks and trailing slashes from a repository folder setting.
     CLASS-METHODS clean_folder
       IMPORTING iv_folder        TYPE csequence
@@ -300,6 +312,39 @@ CLASS zcl_ab_bolt_config IMPLEMENTATION.
                   WHEN 'naming_standard' THEN `naming_standards`
                   WHEN 'policy'          THEN `policies`
                   ELSE `other` ).
+  ENDMETHOD.
+
+
+  METHOD msg_vars.
+    DATA lt_parts TYPE STANDARD TABLE OF symsgv WITH EMPTY KEY.
+
+    CLEAR: ev_v1, ev_v2, ev_v3, ev_v4.
+    DATA(lv_nbsp) = cl_abap_conv_in_ce=>uccp( '00A0' ).
+    DATA(lv_text) = condense( CONV string( iv_text ) ).
+    REPLACE ALL OCCURRENCES OF cl_abap_char_utilities=>newline IN lv_text WITH ` `.
+    IF strlen( lv_text ) > 200.
+      lv_text = substring( val = lv_text len = 199 ) && cl_abap_conv_in_ce=>uccp( '2026' ).
+    ENDIF.
+
+    DATA(lv_off) = 0.
+    WHILE lv_off < strlen( lv_text ) AND lines( lt_parts ) < 4.
+      DATA(lv_len) = nmin( val1 = 50 val2 = strlen( lv_text ) - lv_off ).
+      DATA(lv_part) = substring( val = lv_text off = lv_off len = lv_len ).
+      " Blanks at either end of a part would be dropped by the substitution.
+      IF substring( val = lv_part len = 1 ) = ` `.
+        lv_part = lv_nbsp && substring( val = lv_part off = 1 ).
+      ENDIF.
+      IF strlen( lv_part ) > 1 AND substring( val = lv_part off = strlen( lv_part ) - 1 len = 1 ) = ` `.
+        lv_part = substring( val = lv_part len = strlen( lv_part ) - 1 ) && lv_nbsp.
+      ENDIF.
+      APPEND CONV symsgv( lv_part ) TO lt_parts.
+      lv_off += lv_len.
+    ENDWHILE.
+
+    ev_v1 = VALUE #( lt_parts[ 1 ] OPTIONAL ).
+    ev_v2 = VALUE #( lt_parts[ 2 ] OPTIONAL ).
+    ev_v3 = VALUE #( lt_parts[ 3 ] OPTIONAL ).
+    ev_v4 = VALUE #( lt_parts[ 4 ] OPTIONAL ).
   ENDMETHOD.
 
 
