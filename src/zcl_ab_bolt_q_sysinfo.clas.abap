@@ -50,10 +50,20 @@ CLASS zcl_ab_bolt_q_sysinfo IMPLEMENTATION.
                     indexbuilt    = xsdbool( lv_index > 0 )
                     appversion    = gc_version ) TO lt_rows.
 
+    " RAP terminates when a query option the request contains is not read by the
+    " provider - the UI5 model always sends $skip/$top (and may send $orderby).
+    " One row: sorting changes nothing, paging can only skip it.
+    io_request->get_sort_elements( ).
+    DATA(lo_paging) = io_request->get_paging( ).
+    DATA(lv_offset) = lo_paging->get_offset( ).
+
     IF io_request->is_total_numb_of_rec_requested( ) = abap_true.
       io_response->set_total_number_of_records( lines( lt_rows ) ).
     ENDIF.
     IF io_request->is_data_requested( ) = abap_true.
+      IF lv_offset > 0.
+        CLEAR lt_rows.
+      ENDIF.
       io_response->set_data( lt_rows ).
     ENDIF.
   ENDMETHOD.

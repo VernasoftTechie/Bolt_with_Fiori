@@ -142,6 +142,11 @@ CLASS zcl_ab_bolt_q_form IMPLEMENTATION.
     ENDIF.
     SORT lt_all BY (lt_order).
 
+    " Read the paging always - RAP terminates when a requested option is not read.
+    DATA(lo_paging) = io_request->get_paging( ).
+    DATA(lv_offset) = lo_paging->get_offset( ).
+    DATA(lv_size)   = lo_paging->get_page_size( ).
+
     IF io_request->is_total_numb_of_rec_requested( ) = abap_true.
       io_response->set_total_number_of_records( lines( lt_all ) ).
     ENDIF.
@@ -150,9 +155,6 @@ CLASS zcl_ab_bolt_q_form IMPLEMENTATION.
     ENDIF.
 
     DATA lt_page TYPE ty_t_row.
-    DATA(lo_paging) = io_request->get_paging( ).
-    DATA(lv_offset) = lo_paging->get_offset( ).
-    DATA(lv_size)   = lo_paging->get_page_size( ).
     IF lv_size = if_rap_query_paging=>page_size_unlimited OR lv_size <= 0.
       lt_page = lt_all.
     ELSE.
