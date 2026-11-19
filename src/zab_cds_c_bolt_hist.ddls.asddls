@@ -1,5 +1,5 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
-@EndUserText.label: 'Bolt - migration status history (projection)'
+@EndUserText.label: 'Bolt - status history (projection)'
 define view entity ZAB_CDS_C_BOLT_HIST
   as projection on ZAB_CDS_I_BOLT_HIST
 {
