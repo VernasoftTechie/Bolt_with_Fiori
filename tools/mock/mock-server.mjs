@@ -67,7 +67,7 @@ const T = {
   },
   StatusFile: {
     keys: ['MigUuid'],
-    props: { MigUuid: G, Found: B, MigStatus: S, StatusLabel: S, UpdatedAt: S, WaitingOn: S, Note: S, StopRequested: B, ClaimedBy: S,
+    props: { MigUuid: G, StatusFound: B, MigStatus: S, StatusLabel: S, UpdatedAt: S, WaitingOn: S, Note: S, StopRequested: B, ClaimedBy: S,
       EntryCount: I, BranchUrl: S, Message: S },
   },
   Timeline: {
@@ -272,8 +272,8 @@ function smartForms() {
 }
 function statusRow(m) {
   const s = db.sf[m.MigUuid];
-  if (!s) return { MigUuid: m.MigUuid, Found: false, Message: m.PushStatus === 'PUSHED' ? 'The status file is not on the branch (yet).' : 'Not on GitHub yet - the timeline starts once the migration is sent.' };
-  return { MigUuid: m.MigUuid, Found: true, MigStatus: s.status, StatusLabel: LABELS[s.status] || s.status, UpdatedAt: s.updated, WaitingOn: s.waitingOn,
+  if (!s) return { MigUuid: m.MigUuid, StatusFound: false, Message: m.PushStatus === 'PUSHED' ? 'The status file is not on the branch (yet).' : 'Not on GitHub yet - the timeline starts once the migration is sent.' };
+  return { MigUuid: m.MigUuid, StatusFound: true, MigStatus: s.status, StatusLabel: LABELS[s.status] || s.status, UpdatedAt: s.updated, WaitingOn: s.waitingOn,
     Note: s.note, StopRequested: s.stop, ClaimedBy: s.claimedBy, EntryCount: s.entries.length,
     BranchUrl: `https://github.com/${db.Setup[0].GhRepo}/tree/${m.BranchName}`, Message: '' };
 }
