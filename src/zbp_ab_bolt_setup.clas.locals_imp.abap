@@ -80,6 +80,11 @@ CLASS lhc_setup DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING is_info        TYPE zcl_ab_bolt_github=>ty_repo_info
       RETURNING VALUE(rv_text) TYPE string.
 
+    METHODS msg
+      IMPORTING iv_severity   TYPE if_abap_behv_message=>t_severity
+                iv_text       TYPE string
+      RETURNING VALUE(ro_msg) TYPE REF TO if_abap_behv_message.
+
     METHODS cut
       IMPORTING iv_text        TYPE string
       RETURNING VALUE(rv_text) TYPE string.
@@ -87,6 +92,24 @@ ENDCLASS.
 
 
 CLASS lhc_setup IMPLEMENTATION.
+
+  METHOD msg.
+    " Standard message 00(001) "&1&2&3&4...": up to 200 characters reach the screen
+    " (new_message_with_text keeps only 50 on this release - BUILD_ISSUES_LOG B13).
+    zcl_ab_bolt_config=>msg_vars( EXPORTING iv_text = iv_text
+                                  IMPORTING ev_v1   = DATA(lv_v1)
+                                            ev_v2   = DATA(lv_v2)
+                                            ev_v3   = DATA(lv_v3)
+                                            ev_v4   = DATA(lv_v4) ).
+    ro_msg = new_message( id       = '00'
+                          number   = '001'
+                          severity = iv_severity
+                          v1       = lv_v1
+                          v2       = lv_v2
+                          v3       = lv_v3
+                          v4       = lv_v4 ).
+  ENDMETHOD.
+
 
   METHOD get_global_authorizations.
     " Changing the configuration is an administrator task (the web app's admin
@@ -217,14 +240,14 @@ CLASS lhc_setup IMPLEMENTATION.
                               GhScopes      = cut( ls_user-scopes )
                               GhConnectedAt = zcl_ab_bolt_config=>now( ) ) ).
           APPEND VALUE #( %tky = ls_setup-%tky
-                          %msg = new_message_with_text( severity = if_abap_behv_message=>severity-success
-                                                        text     = |Connected as { ls_user-login } ({ ls_user-name }).| ) )
+                          %msg = msg( iv_severity = if_abap_behv_message=>severity-success
+                                                        iv_text     = |Connected as { ls_user-login } ({ ls_user-name }).| ) )
             TO reported-setup.
         CATCH zcx_ab_bolt INTO DATA(lx_error).
           APPEND VALUE #( %tky = ls_setup-%tky ) TO failed-setup.
           APPEND VALUE #( %tky = ls_setup-%tky
-                          %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                        text     = lx_error->get_text( ) ) ) TO reported-setup.
+                          %msg = msg( iv_severity = if_abap_behv_message=>severity-error
+                                                        iv_text     = lx_error->get_text( ) ) ) TO reported-setup.
       ENDTRY.
     ENDLOOP.
 
@@ -255,8 +278,8 @@ CLASS lhc_setup IMPLEMENTATION.
                           GhCheckRes    = ``
                           GhCheckMsg    = `` ) ).
       APPEND VALUE #( %tky = ls_setup-%tky
-                      %msg = new_message_with_text( severity = if_abap_behv_message=>severity-success
-                                                    text     = `GitHub disconnected - the token was removed from this system.` ) )
+                      %msg = msg( iv_severity = if_abap_behv_message=>severity-success
+                                                    iv_text     = `GitHub disconnected - the token was removed from this system.` ) )
         TO reported-setup.
     ENDLOOP.
 
@@ -282,11 +305,11 @@ CLASS lhc_setup IMPLEMENTATION.
           DATA(ls_info) = github_of( ls_setup )->check_repo( lv_repo ).
           DATA(lv_text) = access_text( ls_info ).
           APPEND VALUE #( %tky = ls_setup-%tky
-                          %msg = new_message_with_text(
-                                   severity = COND #( WHEN ls_info-can_push = abap_true
+                          %msg = msg(
+                                   iv_severity = COND #( WHEN ls_info-can_push = abap_true
                                                       THEN if_abap_behv_message=>severity-success
                                                       ELSE if_abap_behv_message=>severity-warning )
-                                   text     = lv_text ) ) TO reported-setup.
+                                   iv_text     = lv_text ) ) TO reported-setup.
           " Keep the check result only for the repository that is saved.
           IF zcl_ab_bolt_github=>parse_repo( ls_setup-GhRepo )-full_name = ls_info-full_name.
             MODIFY ENTITIES OF zab_cds_i_bolt_setup IN LOCAL MODE
@@ -304,8 +327,8 @@ CLASS lhc_setup IMPLEMENTATION.
         CATCH zcx_ab_bolt INTO DATA(lx_error).
           " A check that fails is an answer, not an error: shown, nothing changed.
           APPEND VALUE #( %tky = ls_setup-%tky
-                          %msg = new_message_with_text( severity = if_abap_behv_message=>severity-warning
-                                                        text     = lx_error->get_text( ) ) ) TO reported-setup.
+                          %msg = msg( iv_severity = if_abap_behv_message=>severity-warning
+                                                        iv_text     = lx_error->get_text( ) ) ) TO reported-setup.
       ENDTRY.
     ENDLOOP.
 
@@ -341,13 +364,13 @@ CLASS lhc_setup IMPLEMENTATION.
                               GhCheckMsg   = cut( access_text( ls_info ) )
                               GhCheckedAt  = zcl_ab_bolt_config=>now( ) ) ).
           APPEND VALUE #( %tky = ls_setup-%tky
-                          %msg = new_message_with_text( severity = if_abap_behv_message=>severity-success
-                                                        text     = lv_text ) ) TO reported-setup.
+                          %msg = msg( iv_severity = if_abap_behv_message=>severity-success
+                                                        iv_text     = lv_text ) ) TO reported-setup.
         CATCH zcx_ab_bolt INTO DATA(lx_error).
           APPEND VALUE #( %tky = ls_setup-%tky ) TO failed-setup.
           APPEND VALUE #( %tky = ls_setup-%tky
-                          %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                        text     = lx_error->get_text( ) ) ) TO reported-setup.
+                          %msg = msg( iv_severity = if_abap_behv_message=>severity-error
+                                                        iv_text     = lx_error->get_text( ) ) ) TO reported-setup.
       ENDTRY.
     ENDLOOP.
 
@@ -392,13 +415,13 @@ CLASS lhc_setup IMPLEMENTATION.
                               GhCheckMsg   = cut( access_text( ls_info ) )
                               GhCheckedAt  = zcl_ab_bolt_config=>now( ) ) ).
           APPEND VALUE #( %tky = ls_setup-%tky
-                          %msg = new_message_with_text( severity = if_abap_behv_message=>severity-success
-                                                        text     = `Repository settings saved.` ) ) TO reported-setup.
+                          %msg = msg( iv_severity = if_abap_behv_message=>severity-success
+                                                        iv_text     = `Repository settings saved.` ) ) TO reported-setup.
         CATCH zcx_ab_bolt INTO DATA(lx_error).
           APPEND VALUE #( %tky = ls_setup-%tky ) TO failed-setup.
           APPEND VALUE #( %tky = ls_setup-%tky
-                          %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                        text     = lx_error->get_text( ) ) ) TO reported-setup.
+                          %msg = msg( iv_severity = if_abap_behv_message=>severity-error
+                                                        iv_text     = lx_error->get_text( ) ) ) TO reported-setup.
       ENDTRY.
     ENDLOOP.
 
@@ -433,15 +456,15 @@ CLASS lhc_setup IMPLEMENTATION.
          AND lv_provider <> zcl_ab_bolt_config=>gc_provider-anthropic.
         APPEND VALUE #( %tky = ls_setup-%tky ) TO failed-setup.
         APPEND VALUE #( %tky = ls_setup-%tky
-                        %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                      text     = |Unknown AI provider "{ lv_provider }".| ) ) TO reported-setup.
+                        %msg = msg( iv_severity = if_abap_behv_message=>severity-error
+                                                      iv_text     = |Unknown AI provider "{ lv_provider }".| ) ) TO reported-setup.
         CONTINUE.
       ENDIF.
       IF lv_needs_key = abap_true AND lv_key IS INITIAL AND lv_key_saved = abap_false.
         APPEND VALUE #( %tky = ls_setup-%tky ) TO failed-setup.
         APPEND VALUE #( %tky = ls_setup-%tky
-                        %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                      text     = `Enter an API key for this provider to save or test.` ) ) TO reported-setup.
+                        %msg = msg( iv_severity = if_abap_behv_message=>severity-error
+                                                      iv_text     = `Enter an API key for this provider to save or test.` ) ) TO reported-setup.
         CONTINUE.
       ENDIF.
 
@@ -466,8 +489,8 @@ CLASS lhc_setup IMPLEMENTATION.
                                                 ELSE zcl_ab_bolt_config=>gc_default_tokens )
                           AiKeySet    = lv_key_set ) ).
       APPEND VALUE #( %tky = ls_setup-%tky
-                      %msg = new_message_with_text( severity = if_abap_behv_message=>severity-success
-                                                    text     = |AI provider saved - { zcl_ab_bolt_ai=>label_of( lv_provider ) }.| ) )
+                      %msg = msg( iv_severity = if_abap_behv_message=>severity-success
+                                                    iv_text     = |AI provider saved - { zcl_ab_bolt_ai=>label_of( lv_provider ) }.| ) )
         TO reported-setup.
     ENDLOOP.
 
@@ -509,11 +532,11 @@ CLASS lhc_setup IMPLEMENTATION.
                           AiCheckMsg  = cut( lv_text )
                           AiCheckedAt = zcl_ab_bolt_config=>now( ) ) ).
       APPEND VALUE #( %tky = ls_setup-%tky
-                      %msg = new_message_with_text(
-                               severity = COND #( WHEN lv_res = zcl_ab_bolt_config=>gc_check-ok
+                      %msg = msg(
+                               iv_severity = COND #( WHEN lv_res = zcl_ab_bolt_config=>gc_check-ok
                                                   THEN if_abap_behv_message=>severity-success
                                                   ELSE if_abap_behv_message=>severity-warning )
-                               text     = lv_text ) ) TO reported-setup.
+                               iv_text     = lv_text ) ) TO reported-setup.
       CLEAR: lv_res, lv_text.
     ENDLOOP.
 
@@ -567,8 +590,8 @@ CLASS lhc_setup IMPLEMENTATION.
       LOOP AT lt_problems INTO DATA(lv_problem).
         APPEND VALUE #( %tky = ls_setup-%tky ) TO failed-setup.
         APPEND VALUE #( %tky = ls_setup-%tky
-                        %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                      text     = lv_problem ) ) TO reported-setup.
+                        %msg = msg( iv_severity = if_abap_behv_message=>severity-error
+                                                      iv_text     = lv_problem ) ) TO reported-setup.
       ENDLOOP.
     ENDLOOP.
   ENDMETHOD.

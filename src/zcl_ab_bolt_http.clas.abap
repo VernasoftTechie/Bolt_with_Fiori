@@ -158,10 +158,14 @@ CLASS zcl_ab_bolt_http IMPLEMENTATION.
       DATA lv_message TYPE string.
       lo_client->get_last_error( IMPORTING message = lv_message ).
       lo_client->close( EXCEPTIONS OTHERS = 1 ).
+      " SAP's SSL texts continue with internal trace parts after '#' - keep the reason only,
+      " so the reason and the fix fit into one message on the screen.
+      SPLIT lv_message AT '#' INTO lv_message DATA(lv_trace) ##NEEDED.
+      DATA(lv_pse) = COND string( WHEN is_endpoint-ssl_id IS INITIAL THEN `ANONYM` ELSE CONV string( is_endpoint-ssl_id ) ).
       RAISE EXCEPTION NEW zcx_ab_bolt(
-        iv_text = |The call to { where( is_endpoint ) } failed: { lv_message }. | &&
-                  |Check that the root certificate is in STRUST (SSL client { COND string( WHEN is_endpoint-ssl_id IS INITIAL THEN `ANONYM` ELSE CONV string( is_endpoint-ssl_id ) ) }) | &&
-                  |and that the system can reach the internet (proxy in SICF > Client > Proxy Settings).| ).
+        iv_text = COND #( WHEN lv_message CS `SSL` OR lv_message CS `CERT`
+                          THEN |{ condense( lv_message ) }. Import the server's root + intermediate certificate in STRUST, PSE SSL client { lv_pse }, then restart the ICM.|
+                          ELSE |Call to { where( is_endpoint ) } failed: { condense( lv_message ) }. Check the network/proxy (SICF > Client > Proxy Settings).| ) ).
     ENDIF.
 
     lo_client->response->get_status( IMPORTING code   = rs_response-code

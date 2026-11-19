@@ -24,8 +24,10 @@
           <ObjectStatus text="{= ${app>/ready/github} ? 'GitHub ✓' : 'GitHub' }"
                         state="{= ${app>/ready/repo} ? 'Success' : 'Error' }"
                         tooltip="{i18n>readyGithubTip}" class="boltChip"/>
-          <ObjectStatus text="{= ${app>/ready/ai} ? 'AI ✓' : 'AI' }"
-                        state="{= ${app>/ready/ai} ? 'Success' : 'Error' }"
+          <!-- Built-in provider = no AI model connected: neutral, not green. Green only for a
+               provider with a saved key whose last test did not fail. -->
+          <ObjectStatus text="{= (${app>/setup/AiProvider} === 'mock' || !${app>/setup/AiProvider}) ? ${i18n>aiChipBuiltin} : (${app>/ready/ai} &amp;&amp; ${app>/setup/AiCheckRes} !== 'ERROR' ? 'AI ✓' : 'AI') }"
+                        state="{= (${app>/setup/AiProvider} === 'mock' || !${app>/setup/AiProvider}) ? 'Information' : (${app>/ready/ai} &amp;&amp; ${app>/setup/AiCheckRes} !== 'ERROR' ? 'Success' : 'Error') }"
                         tooltip="{i18n>readyAiTip}" class="boltChip"/>
           <ObjectStatus text="{= ${app>/ready/all} ? ${i18n>live} : ${i18n>setupNeeded} }"
                         state="{= ${app>/ready/all} ? 'Success' : 'Error' }"
@@ -268,8 +270,8 @@
                     <Toolbar>
                       <Title text="{i18n>cfgAi}"/>
                       <ToolbarSpacer/>
-                      <ObjectStatus text="{= ${app>/ready/ai} ? ${i18n>ready} : ${i18n>needsKey} }"
-                                    state="{= ${app>/ready/ai} ? 'Success' : 'Warning' }"/>
+                      <ObjectStatus text="{= (${app>/setup/AiProvider} === 'mock' || !${app>/setup/AiProvider}) ? ${i18n>builtinNoModel} : (${app>/ready/ai} ? (${app>/setup/AiCheckRes} === 'ERROR' ? ${i18n>testFailed} : ${i18n>ready}) : ${i18n>needsKey}) }"
+                                    state="{= (${app>/setup/AiProvider} === 'mock' || !${app>/setup/AiProvider}) ? 'Information' : (${app>/ready/ai} &amp;&amp; ${app>/setup/AiCheckRes} !== 'ERROR' ? 'Success' : 'Warning') }"/>
                     </Toolbar>
                   </headerToolbar>
                   <VBox class="boltFields">
