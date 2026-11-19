@@ -573,6 +573,9 @@ sap.ui.define([
 
     onPrefixLive: function () { /* the example under the field is bound - nothing to do */ },
 
+    /** Typing or pasting a key unlocks Test connection / Save at once (blockedForKey). */
+    onAiKeyLive: function () { this._aiDerived(); },
+
     _repoParams: function () {
       var r = this.getView().getModel("view").getProperty("/repo");
       return { Repo: (r.Repo || "").trim(), BranchPrefix: (r.BranchPrefix || "").trim() };
