@@ -6,7 +6,7 @@
 "! Nothing client-specific is hard-coded: every value a client could differ in
 "! (client name, repository, branch prefix, folders, GitHub/AI endpoints,
 "! Smart Form name prefixes, administrators) lives in the setup row and is
-"! maintained on the Configuration tab. The defaults below are only what a
+"! maintained on the Setup page. The defaults below are only what a
 "! brand-new setup row starts with.
 CLASS zcl_ab_bolt_config DEFINITION
   PUBLIC
@@ -103,7 +103,7 @@ CLASS zcl_ab_bolt_config DEFINITION
     CLASS-METHODS get_setup
       RETURNING VALUE(rs_setup) TYPE zabt_bolt_setup.
 
-    "! A brand-new setup row (what the Configuration tab starts with).
+    "! A brand-new setup row (what the Setup page starts with).
     CLASS-METHODS default_setup
       RETURNING VALUE(rs_setup) TYPE zabt_bolt_setup.
 

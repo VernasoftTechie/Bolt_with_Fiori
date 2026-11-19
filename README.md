@@ -5,11 +5,15 @@ Replaces the Bolt Console web app with an app that runs **inside the client's SA
 - **Smart Forms** — every custom Smart Form of the system the app is launched in. Select, Next,
   Commit: each form gets a serial number and a GitHub branch, and its legacy files (legacy grab,
   driver sources, Smart Form XML, Smart Styles) are produced in SAP and sent automatically.
-- **Migration** — live status of every migration from its branch status file; the communication
+- **Drafts** — committed forms whose initial load is not on GitHub yet (GitHub not set up, or the
+  send failed). Send them again as often as needed, or discard one to free the form.
+- **Migrations** — live status of every migration from its branch status file; the communication
   panel to answer the migration engineer (confirm, problem, question, change, concern, files),
   stop / resume, legacy documents, status history.
-- **Configuration** — GitHub, AI provider, target repository, global reference library;
-  administrators only. Everything client-specific lives here.
+- **Setup** (right side, own page) — GitHub, AI provider, target repository, global reference
+  library; administrators only. Everything client-specific lives here.
+- **Help** (right side, own page) — searchable in-app help, `app/bolt-fiori/webapp/help/help.html`,
+  updated with every change (see *What's new*).
 
 The engineer side is unchanged: engineer windows work from the branches and status files exactly as
 with the web app.

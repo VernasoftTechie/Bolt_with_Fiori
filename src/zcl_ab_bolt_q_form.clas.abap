@@ -46,6 +46,7 @@ CLASS zcl_ab_bolt_q_form IMPLEMENTATION.
         serial_no  TYPE zabt_bolt_mig-serial_no,
         mig_status TYPE zabt_bolt_mig-mig_status,
         stopped    TYPE zabt_bolt_mig-stopped,
+        push_status TYPE zabt_bolt_mig-push_status,
       END OF ty_last.
     DATA lt_all  TYPE STANDARD TABLE OF ty_last WITH EMPTY KEY.
     DATA lt_last TYPE SORTED TABLE OF ty_last WITH UNIQUE KEY form_name.
@@ -56,7 +57,7 @@ CLASS zcl_ab_bolt_q_form IMPLEMENTATION.
                                             ev_prefix2 = DATA(lv_p2) ).
     DATA(lt_forms) = zcl_ab_bolt_form_catalog=>list( iv_prefix1 = lv_p1 iv_prefix2 = lv_p2 ).
 
-    SELECT form_name, run_no, mig_uuid, serial_no, mig_status, stopped FROM zabt_bolt_mig
+    SELECT form_name, run_no, mig_uuid, serial_no, mig_status, stopped, push_status FROM zabt_bolt_mig
       ORDER BY form_name, run_no DESCENDING
       INTO TABLE @lt_all.
     LOOP AT lt_all INTO DATA(ls_row_db).
@@ -82,7 +83,8 @@ CLASS zcl_ab_bolt_q_form IMPLEMENTATION.
       IF sy-subrc = 0.
         ls_row-lastserialno = ls_last-serial_no.
         ls_row-lastrunno    = ls_last-run_no.
-        ls_row-laststatus   = ls_last-mig_status.
+        " A draft (initial load not on GitHub yet) says so instead of the status-file status.
+        ls_row-laststatus   = COND #( WHEN ls_last-push_status <> zcl_ab_bolt_config=>gc_push-pushed THEN 'draft' ELSE ls_last-mig_status ).
         ls_row-lastmiguuid  = ls_last-mig_uuid.
         IF ls_last-mig_status = zcl_ab_bolt_config=>gc_status-completed.
           ls_row-migstate   = gc_state-completed.

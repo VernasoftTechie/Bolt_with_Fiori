@@ -12,7 +12,7 @@
 *&
 *& Run it once after installation, then daily in background
 *& (job Z_AB_DA_BOLT_DRIVER_INDEX, see docs/04_installation.md).
-*& Prefixes default to the Configuration tab's "Smart Form name prefixes".
+*& Prefixes default to the Setup page's "Smart Form name prefixes".
 *&---------------------------------------------------------------------*
 REPORT zabr_bolt_driver_index.
 
