@@ -10,12 +10,35 @@ CLASS lhc_library DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR Library RESULT result.
 
+    METHODS msg
+      IMPORTING iv_severity   TYPE if_abap_behv_message=>t_severity
+                iv_text       TYPE string
+      RETURNING VALUE(ro_msg) TYPE REF TO if_abap_behv_message.
+
     METHODS upload FOR MODIFY
       IMPORTING keys FOR ACTION Library~upload RESULT result.
 ENDCLASS.
 
 
 CLASS lhc_library IMPLEMENTATION.
+
+  METHOD msg.
+    " Standard message 00(001) "&1&2&3&4...": up to 200 characters reach the screen
+    " (new_message_with_text keeps only 50 on this release - BUILD_ISSUES_LOG B13).
+    zcl_ab_bolt_config=>msg_vars( EXPORTING iv_text = iv_text
+                                  IMPORTING ev_v1   = DATA(lv_v1)
+                                            ev_v2   = DATA(lv_v2)
+                                            ev_v3   = DATA(lv_v3)
+                                            ev_v4   = DATA(lv_v4) ).
+    ro_msg = new_message( id       = '00'
+                          number   = '001'
+                          severity = iv_severity
+                          v1       = lv_v1
+                          v2       = lv_v2
+                          v3       = lv_v3
+                          v4       = lv_v4 ).
+  ENDMETHOD.
+
 
   METHOD get_global_authorizations.
     DATA(lv_admin) = COND #( WHEN zcl_ab_bolt_config=>is_admin( ) = abap_true
@@ -38,8 +61,8 @@ CLASS lhc_library IMPLEMENTATION.
     IF lv_category <> 'logo' AND lv_category <> 'smartstyle' AND lv_category <> 'naming_standard' AND lv_category <> 'policy'.
       APPEND VALUE #( %cid = ls_key-%cid ) TO failed-library.
       APPEND VALUE #( %cid = ls_key-%cid
-                      %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                    text     = `Choose a category first.` ) ) TO reported-library.
+                      %msg = msg( iv_severity = if_abap_behv_message=>severity-error
+                                                    iv_text     = `Choose a category first.` ) ) TO reported-library.
       RETURN.
     ENDIF.
 
@@ -48,15 +71,15 @@ CLASS lhc_library IMPLEMENTATION.
       CATCH zcx_ab_bolt INTO DATA(lx_parse).
         APPEND VALUE #( %cid = ls_key-%cid ) TO failed-library.
         APPEND VALUE #( %cid = ls_key-%cid
-                        %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                      text     = lx_parse->get_text( ) ) ) TO reported-library.
+                        %msg = msg( iv_severity = if_abap_behv_message=>severity-error
+                                                      iv_text     = lx_parse->get_text( ) ) ) TO reported-library.
         RETURN.
     ENDTRY.
     IF lt_files IS INITIAL.
       APPEND VALUE #( %cid = ls_key-%cid ) TO failed-library.
       APPEND VALUE #( %cid = ls_key-%cid
-                      %msg = new_message_with_text( severity = if_abap_behv_message=>severity-error
-                                                    text     = `Choose at least one file.` ) ) TO reported-library.
+                      %msg = msg( iv_severity = if_abap_behv_message=>severity-error
+                                                    iv_text     = `Choose at least one file.` ) ) TO reported-library.
       RETURN.
     ENDIF.
 
@@ -108,10 +131,10 @@ CLASS lhc_library IMPLEMENTATION.
       MAPPED DATA(ls_mapped).
 
     APPEND VALUE #( %cid = ls_key-%cid
-                    %msg = new_message_with_text(
-                             severity = COND #( WHEN lv_pushed = abap_true THEN if_abap_behv_message=>severity-success
+                    %msg = msg(
+                             iv_severity = COND #( WHEN lv_pushed = abap_true THEN if_abap_behv_message=>severity-success
                                                 ELSE if_abap_behv_message=>severity-warning )
-                             text     = |{ lines( lt_create ) } file(s) added to { zcl_ab_bolt_config=>library_subfolder( lv_category ) } - { lv_msg }| ) )
+                             iv_text     = |{ lines( lt_create ) } file(s) added to { zcl_ab_bolt_config=>library_subfolder( lv_category ) } - { lv_msg }| ) )
       TO reported-library.
 
     READ ENTITIES OF zab_cds_i_bolt_lib IN LOCAL MODE

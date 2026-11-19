@@ -120,7 +120,20 @@ CLASS lhc_migration IMPLEMENTATION.
 
 
   METHOD msg.
-    ro_msg = new_message_with_text( severity = iv_severity text = iv_text ).
+    " Standard message 00(001) "&1&2&3&4...": up to 200 characters reach the screen
+    " (new_message_with_text keeps only 50 on this release - BUILD_ISSUES_LOG B13).
+    zcl_ab_bolt_config=>msg_vars( EXPORTING iv_text = iv_text
+                                  IMPORTING ev_v1   = DATA(lv_v1)
+                                            ev_v2   = DATA(lv_v2)
+                                            ev_v3   = DATA(lv_v3)
+                                            ev_v4   = DATA(lv_v4) ).
+    ro_msg = new_message( id       = '00'
+                          number   = '001'
+                          severity = iv_severity
+                          v1       = lv_v1
+                          v2       = lv_v2
+                          v3       = lv_v3
+                          v4       = lv_v4 ).
   ENDMETHOD.
 
 
