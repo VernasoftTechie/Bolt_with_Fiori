@@ -80,12 +80,20 @@ sap.ui.define([
      * reachable with push access, AI provider ready (built-in, or a key saved).
      */
     loadContext: async function () {
+      // The system info and the setup row are read independently: a problem with
+      // one (e.g. the setup behaviour not active yet) never blanks the header or
+      // the Smart Forms list - it is shown in a message strip instead.
       var oService = this.service();
-      var oSetup = await oService.action("/Setup", "initialize", {});
-      var aSys = await oService.list("/SystemInfo");
-      var oSys = aSys[0] || {};
       var oApp = this.appModel();
-      oApp.setProperty("/setup", oSetup || {});
+      var oSys = {};
+      var oSetup = null;
+      oApp.setProperty("/sysError", "");
+      oApp.setProperty("/setupError", "");
+      try {
+        oSys = (await oService.list("/SystemInfo"))[0] || {};
+      } catch (oError) {
+        oApp.setProperty("/sysError", this.errorOf(oError));
+      }
       oApp.setProperty("/sys", oSys);
       oApp.setProperty("/isAdmin", formatter.isX(oSys.IsAdmin));
       oApp.setProperty("/ready", {
@@ -94,6 +102,12 @@ sap.ui.define([
         ai: formatter.isX(oSys.AiReady),
         all: formatter.isX(oSys.Live)
       });
+      try {
+        oSetup = await oService.action("/Setup", "initialize", {});
+      } catch (oError) {
+        oApp.setProperty("/setupError", this.errorOf(oError));
+      }
+      oApp.setProperty("/setup", oSetup || {});
       return oSetup;
     },
 
