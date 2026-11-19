@@ -53,7 +53,9 @@ sap.ui.define([
     },
 
     showError: function (oError) {
-      MessageBox.error(this.errorOf(oError));
+      // Wide and wrapping: SAP/GitHub texts contain long words (SSL codes, URLs) that
+      // would otherwise be cut off - and the hint is at the end of the message.
+      MessageBox.error(this.errorOf(oError), { contentWidth: "40rem", styleClass: "boltMsgWrap" });
     },
 
     /** Success/information/warning messages RAP returned with the last call. */
@@ -65,7 +67,7 @@ sap.ui.define([
       var aMessages = this.takeMessages();
       var aWarnings = aMessages.filter(function (m) { return m.type === "Warning" || m.type === "Error"; });
       if (aWarnings.length) {
-        MessageBox.warning(aWarnings.map(function (m) { return m.text; }).join("\n"));
+        MessageBox.warning(aWarnings.map(function (m) { return m.text; }).join("\n"), { contentWidth: "40rem", styleClass: "boltMsgWrap" });
         return;
       }
       var sText = aMessages.length ? aMessages.map(function (m) { return m.text; }).join("\n") : sFallback;
