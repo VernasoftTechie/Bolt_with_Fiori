@@ -3,9 +3,14 @@ sap.ui.define([
   "sap/m/MessageToast",
   "sap/m/MessageBox",
   "vernasoft/boltfiori/model/formatter",
-  "sap/ui/model/Sorter"
-], function (Controller, MessageToast, MessageBox, formatter, Sorter) {
+  "vernasoft/boltfiori/model/service"
+], function (Controller, MessageToast, MessageBox, formatter, service) {
   "use strict";
+
+  // Same picker rules as the web app's FilePicker.jsx (accept list), plus a size cap
+  // so one upload stays well inside the gateway's request limit.
+  var ACCEPT = ["png", "jpg", "jpeg", "gif", "bmp", "svg", "webp", "pdf", "doc", "docx", "txt", "log", "xml", "md"];
+  var MAX_BYTES = 25 * 1024 * 1024;
 
   return Controller.extend("vernasoft.boltfiori.controller.BaseController", {
     formatter: formatter,
@@ -26,30 +31,38 @@ sap.ui.define([
       return this.getOwnerComponent().getRouter();
     },
 
-    /** Runs fnWork with the app busy; shows the backend's message on failure. */
-    withBusy: async function (fnWork, sBusyPath) {
-      var oModel = sBusyPath ? this.getView().getModel(sBusyPath.split(">")[0]) : this.appModel();
-      var sPath = sBusyPath ? sBusyPath.split(">")[1] : "/busy";
-      oModel.setProperty(sPath, true);
+    /** Runs fnWork with a busy flag set; shows the backend's message on failure. */
+    withBusy: async function (fnWork, sModel, sPath) {
+      var oModel = sModel ? this.getView().getModel(sModel) : this.appModel();
+      var sFlag = sPath || "/busy";
+      oModel.setProperty(sFlag, true);
       try {
         return await fnWork();
       } catch (oError) {
         this.showError(oError);
         return undefined;
       } finally {
-        oModel.setProperty(sPath, false);
+        oModel.setProperty(sFlag, false);
       }
     },
 
-    showError: function (oError) {
+    /** The backend's own error text (RAP messages first, then the HTTP error). */
+    errorOf: function (oError) {
       var aMessages = this.service().drainMessages().filter(function (m) { return m.type === "Error"; });
-      var sText = aMessages.length ? aMessages.map(function (m) { return m.text; }).join("\n") : this.service().errorText(oError);
-      MessageBox.error(sText);
+      return aMessages.length ? aMessages.map(function (m) { return m.text; }).join("\n") : this.service().errorText(oError);
     },
 
-    /** Shows the success/information/warning messages RAP returned with the last call. */
+    showError: function (oError) {
+      MessageBox.error(this.errorOf(oError));
+    },
+
+    /** Success/information/warning messages RAP returned with the last call. */
+    takeMessages: function () {
+      return this.service().drainMessages();
+    },
+
     showMessages: function (sFallback) {
-      var aMessages = this.service().drainMessages();
+      var aMessages = this.takeMessages();
       var aWarnings = aMessages.filter(function (m) { return m.type === "Warning" || m.type === "Error"; });
       if (aWarnings.length) {
         MessageBox.warning(aWarnings.map(function (m) { return m.text; }).join("\n"));
@@ -61,55 +74,110 @@ sap.ui.define([
       }
     },
 
-    /** Loads the setup row (creating it on first start) and the source systems. */
-    loadSetup: async function () {
+    /**
+     * The system the app runs in and the setup row (created on first start).
+     * Readiness follows the web app: GitHub token connected, target repository
+     * reachable with push access, AI provider ready (built-in, or a key saved).
+     */
+    loadContext: async function () {
       var oService = this.service();
-      var oSetup;
-      try {
-        oSetup = await oService.object("/Setup('DEFAULT')");
-      } catch (e) {
-        oSetup = null;
-      }
-      if (!oSetup) {
-        oSetup = await oService.action("/Setup", "initialize", {});
-      }
-      var aSystems = await oService.list("/SourceSystem", {
-        sorters: [new Sorter("SortOrder"), new Sorter("SystemId")]
-      });
+      var oSetup = await oService.action("/Setup", "initialize", {});
+      var aSys = await oService.list("/SystemInfo");
+      var oSys = aSys[0] || {};
       var oApp = this.appModel();
       oApp.setProperty("/setup", oSetup || {});
-      oApp.setProperty("/customer", (oSetup && oSetup.CustomerName) || "");
-      oApp.setProperty("/systems", aSystems);
-      oApp.setProperty("/isAdmin", this.isAdmin(oSetup));
-      this.updateReadiness();
+      oApp.setProperty("/sys", oSys);
+      oApp.setProperty("/isAdmin", formatter.isX(oSys.IsAdmin));
+      oApp.setProperty("/ready", {
+        github: formatter.isX(oSys.GitHubReady),
+        repo: formatter.isX(oSys.RepoReady),
+        ai: formatter.isX(oSys.AiReady),
+        all: formatter.isX(oSys.Live)
+      });
       return oSetup;
     },
 
-    isAdmin: function (oSetup) {
-      var sList = ((oSetup && oSetup.AdminUsers) || "").trim().toUpperCase();
-      if (!sList) { return true; }
-      // In the Fiori launchpad the user is known; standalone, the backend decides.
-      try {
-        var sUser = sap.ushell && sap.ushell.Container && sap.ushell.Container.getUser().getId().toUpperCase();
-        if (sUser) {
-          return sList.split(",").map(function (s) { return s.trim(); }).indexOf(sUser) >= 0;
+    // ---- file picker (FilePicker.jsx): stage several files, remove before sending ----
+
+    /** FileUploader "change": adds the chosen files to the list at sModel>sPath. */
+    stageFiles: function (aFiles, sModel, sPath) {
+      var oModel = this.getView().getModel(sModel);
+      var aStaged = (oModel.getProperty(sPath) || []).slice();
+      var aRefused = [];
+      Array.prototype.forEach.call(aFiles || [], function (oFile) {
+        var sExt = String(oFile.name).split(".").pop().toLowerCase();
+        if (sPath.indexOf("lib") < 0 && ACCEPT.indexOf(sExt) < 0 && !/^image\//.test(oFile.type)) {
+          aRefused.push(oFile.name + " (type not accepted)");
+          return;
         }
-      } catch (e) { /* not in the launchpad */ }
-      return true;
+        if (oFile.size > MAX_BYTES) {
+          aRefused.push(oFile.name + " (larger than 25 MB)");
+          return;
+        }
+        aStaged.push({ name: oFile.name, size: oFile.size, file: oFile });
+      });
+      oModel.setProperty(sPath, aStaged);
+      if (aRefused.length) {
+        MessageToast.show(this.i18n("filesRefused", [aRefused.join(", ")]), { duration: 6000, width: "30rem" });
+      }
     },
 
-    /** Same gate as Bolt Console: SAP source system, GitHub and AI must be connected. */
-    updateReadiness: function (sSystemId) {
-      var oApp = this.appModel();
-      var oSetup = oApp.getProperty("/setup") || {};
-      var aSystems = oApp.getProperty("/systems") || [];
-      var sId = sSystemId || oApp.getProperty("/selectedSystem");
-      var oSystem = aSystems.find(function (s) { return s.SystemId === sId; }) ||
-        aSystems.find(function (s) { return s.IsDefault === "X"; }) || aSystems[0];
-      var bGithub = oSetup.GhStatus === "OK";
-      var bAi = !oSetup.AiProvider || oSetup.AiProvider === "NONE" || oSetup.AiStatus === "OK";
-      var bSystem = !!oSystem && oSystem.Status === "OK";
-      oApp.setProperty("/ready", { github: bGithub, ai: bAi, system: bSystem, all: bGithub && bAi && bSystem });
-    }
+    unstageFile: function (oEvent, sModel, sPath) {
+      var oItem = oEvent.getParameter("listItem") || oEvent.getSource();
+      var iIndex = +oItem.getBindingContext(sModel).getPath().split("/").pop();
+      var aStaged = (this.getView().getModel(sModel).getProperty(sPath) || []).slice();
+      aStaged.splice(iIndex, 1);
+      this.getView().getModel(sModel).setProperty(sPath, aStaged);
+    },
+
+    /**
+     * Drag & drop of files from the PC (FilePicker.jsx: "drag & drop or choose")
+     * onto any element marked with the custom data bolt-drop="<model>|<path>".
+     * One delegated native listener on the view's root, so drop zones inside
+     * fragments and re-rendered panels keep working.
+     */
+    enableDropZones: function () {
+      var that = this;
+      var oView = this.getView();
+      var zoneOf = function (e) {
+        return e.target && e.target.closest ? e.target.closest("[data-bolt-drop]") : null;
+      };
+      oView.addEventDelegate({
+        onAfterRendering: function () {
+          var oDom = oView.getDomRef();
+          if (!oDom || oDom._boltDrop) { return; }
+          oDom._boltDrop = true;
+          oDom.addEventListener("dragover", function (e) {
+            var oZone = zoneOf(e);
+            if (!oZone) { return; }
+            e.preventDefault();
+            oZone.classList.add("boltDropActive");
+          });
+          oDom.addEventListener("dragleave", function (e) {
+            var oZone = zoneOf(e);
+            if (oZone) { oZone.classList.remove("boltDropActive"); }
+          });
+          oDom.addEventListener("drop", function (e) {
+            var oZone = zoneOf(e);
+            if (!oZone) { return; }
+            e.preventDefault();
+            oZone.classList.remove("boltDropActive");
+            var aTarget = String(oZone.getAttribute("data-bolt-drop")).split("|");
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+              that.stageFiles(e.dataTransfer.files, aTarget[0], aTarget[1]);
+            }
+          });
+        }
+      });
+    },
+
+    /** The staged files as the FilesJson action parameter. */
+    filesJson: async function (aStaged) {
+      if (!aStaged || !aStaged.length) { return ""; }
+      var aRead = await service.readFiles(aStaged.map(function (o) { return o.file; }));
+      return JSON.stringify(aRead.map(function (o) { return { name: o.name, content: o.content }; }));
+    },
+
+    acceptList: function () { return ACCEPT.join(","); }
   });
 });

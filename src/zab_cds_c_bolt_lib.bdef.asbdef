@@ -1,0 +1,9 @@
+projection;
+strict ( 2 );
+
+define behavior for ZAB_CDS_C_BOLT_LIB alias Library
+use etag
+{
+  use delete;
+  use action upload;
+}

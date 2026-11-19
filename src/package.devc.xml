@@ -3,7 +3,7 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <DEVC>
-    <CTEXT>Bolt with Fiori - Smart Form migration console</CTEXT>
+    <CTEXT>Bolt - Smart Form to Adobe migration console (Fiori)</CTEXT>
    </DEVC>
   </asx:values>
  </asx:abap>

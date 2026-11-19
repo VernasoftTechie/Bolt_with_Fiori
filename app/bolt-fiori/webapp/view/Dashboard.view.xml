@@ -2,49 +2,42 @@
   controllerName="vernasoft.boltfiori.controller.Dashboard"
   xmlns:mvc="sap.ui.core.mvc"
   xmlns:core="sap.ui.core"
+  xmlns:u="sap.ui.unified"
   xmlns="sap.m"
   height="100%"
   displayBlock="true">
 
-  <!-- One dashboard screen, four tabs - the same layout and flow as the
-       Bolt Console web app (Migrations / Configure / Help), plus the new
-       Smart Forms Overview that replaces the manual legacy-grab upload. -->
+  <!-- One dashboard, four tabs: Smart Forms / Migration / Configuration / Help.
+       No system selection: the Smart Forms are those of the system the app is
+       launched in (shown in the header). -->
   <Page id="page" class="boltPage" showHeader="true" enableScrolling="true">
     <customHeader>
       <Bar class="boltTopBar">
         <contentLeft>
           <core:Icon src="sap-icon://journey-change" class="boltBrandIcon"/>
           <Title text="{i18n>appTitle}" level="H1" class="boltBrand"/>
-          <Text text="{app>/customer}" class="boltCustomer" visible="{= !!${app>/customer} }"/>
+          <Text text="{app>/setup/CustomerName}" class="boltCustomer" visible="{= !!${app>/setup/CustomerName} }"/>
         </contentLeft>
         <contentRight>
-          <ObjectStatus text="{= ${app>/ready/system} ? 'SAP ✓' : 'SAP' }"
-                        state="{= ${app>/ready/system} ? 'Success' : 'Error' }"
-                        tooltip="{i18n>readySystemTip}" class="boltChip"/>
+          <ObjectStatus text="{app>/sys/SystemId} · {i18n>client} {app>/sys/Client}" icon="sap-icon://it-system"
+                        tooltip="{i18n>systemTip}" class="boltChip"/>
           <ObjectStatus text="{= ${app>/ready/github} ? 'GitHub ✓' : 'GitHub' }"
-                        state="{= ${app>/ready/github} ? 'Success' : 'Error' }"
+                        state="{= ${app>/ready/repo} ? 'Success' : 'Error' }"
                         tooltip="{i18n>readyGithubTip}" class="boltChip"/>
           <ObjectStatus text="{= ${app>/ready/ai} ? 'AI ✓' : 'AI' }"
                         state="{= ${app>/ready/ai} ? 'Success' : 'Error' }"
                         tooltip="{i18n>readyAiTip}" class="boltChip"/>
-          <!-- class can't be bound in XML views, so the LIVE pill is an inverted ObjectStatus -->
           <ObjectStatus text="{= ${app>/ready/all} ? ${i18n>live} : ${i18n>setupNeeded} }"
                         state="{= ${app>/ready/all} ? 'Success' : 'Error' }"
                         icon="sap-icon://circle-task-2" inverted="true" tooltip="{i18n>liveTip}" class="boltLive"/>
-          <Switch state="{app>/autoRefresh}" customTextOn="Auto" customTextOff="Off" change=".onToggleAutoRefresh"
-                  tooltip="{i18n>autoRefreshTip}"/>
           <Button icon="sap-icon://refresh" tooltip="{i18n>refreshAll}" press=".onRefreshAll"/>
         </contentRight>
       </Bar>
     </customHeader>
 
     <content>
-      <MessageStrip
-        visible="{= !${app>/ready/all} }"
-        type="Warning"
-        showIcon="true"
-        class="sapUiSmallMargin"
-        text="{i18n>notReadyStrip}">
+      <MessageStrip visible="{= !${app>/ready/all} }" type="Warning" showIcon="true"
+                    class="sapUiSmallMargin" text="{i18n>notReadyStrip}">
         <link>
           <Link text="{i18n>openConfiguration}" press=".onOpenConfiguration"/>
         </link>
@@ -52,8 +45,8 @@
 
       <!-- KPI tiles - each one opens the matching list -->
       <HBox wrap="Wrap" class="boltTiles sapUiSmallMarginBeginEnd sapUiSmallMarginTop">
-        <GenericTile header="{i18n>kpiForms}" subheader="{view>/systemId}" frameType="OneByHalf" press=".onKpiPress" class="boltTile">
-          <customData><core:CustomData key="target" value="overview"/></customData>
+        <GenericTile header="{i18n>kpiForms}" subheader="{app>/sys/SystemId}" frameType="OneByHalf" press=".onKpiPress" class="boltTile">
+          <customData><core:CustomData key="target" value="forms"/></customData>
           <TileContent><NumericContent value="{view>/kpi/forms}" withMargin="false" icon="sap-icon://document"/></TileContent>
         </GenericTile>
         <GenericTile header="{i18n>kpiInMigration}" frameType="OneByHalf" press=".onKpiPress" class="boltTile">
@@ -68,13 +61,13 @@
           <customData><core:CustomData key="target" value="active"/></customData>
           <TileContent><NumericContent value="{view>/kpi/active}" withMargin="false" icon="sap-icon://process"/></TileContent>
         </GenericTile>
+        <GenericTile header="{i18n>kpiStopped}" frameType="OneByHalf" press=".onKpiPress" class="boltTile">
+          <customData><core:CustomData key="target" value="stopped"/></customData>
+          <TileContent><NumericContent value="{view>/kpi/stopped}" valueColor="Error" withMargin="false" icon="sap-icon://stop"/></TileContent>
+        </GenericTile>
         <GenericTile header="{i18n>kpiCompleted}" frameType="OneByHalf" press=".onKpiPress" class="boltTile">
           <customData><core:CustomData key="target" value="completed"/></customData>
           <TileContent><NumericContent value="{view>/kpi/completed}" valueColor="Good" withMargin="false" icon="sap-icon://complete"/></TileContent>
-        </GenericTile>
-        <GenericTile header="{i18n>kpiProblems}" frameType="OneByHalf" press=".onKpiPress" class="boltTile">
-          <customData><core:CustomData key="target" value="problems"/></customData>
-          <TileContent><NumericContent value="{view>/kpi/problems}" valueColor="Error" withMargin="false" icon="sap-icon://alert"/></TileContent>
         </GenericTile>
       </HBox>
 
@@ -82,39 +75,43 @@
                   class="sapUiResponsiveContentPadding boltTabs" stretchContentHeight="false">
         <items>
 
-          <!-- ============================================================ -->
-          <IconTabFilter key="overview" text="{i18n>tabOverview}" icon="sap-icon://documents">
+          <!-- ============================ SMART FORMS ============================ -->
+          <IconTabFilter key="forms" text="{i18n>tabForms}" icon="sap-icon://documents" count="{view>/kpi/forms}">
             <OverflowToolbar class="boltToolbar">
-              <Label text="{i18n>sourceSystem}" labelFor="systemSelect"/>
-              <Select id="systemSelect" selectedKey="{view>/systemId}" change=".onSystemChange"
-                      items="{path: 'app>/systems', templateShareable: false}" width="16rem">
-                <core:Item key="{app>SystemId}" text="{app>SystemId} - {app>Description}"/>
-              </Select>
               <SearchField value="{view>/search}" liveChange=".onFormSearch" width="18rem" placeholder="{i18n>searchForms}"/>
               <SegmentedButton selectedKey="{view>/formFilter}" selectionChange=".onFormFilter">
                 <items>
                   <SegmentedButtonItem key="all" text="{i18n>filterAll}"/>
                   <SegmentedButtonItem key="available" text="{i18n>filterAvailable}"/>
-                  <SegmentedButtonItem key="inmig" text="{i18n>filterInMigration}"/>
+                  <SegmentedButtonItem key="ACTIVE" text="{i18n>filterInMigration}"/>
+                  <SegmentedButtonItem key="STOPPED" text="{i18n>filterStopped}"/>
+                  <SegmentedButtonItem key="COMPLETED" text="{i18n>filterCompleted}"/>
                 </items>
               </SegmentedButton>
               <ToolbarSpacer/>
-              <Text text="{= ${view>/selectedCount} + ' selected' }"/>
+              <Text text="{i18n>selectedCount} {view>/selectedCount}"/>
+              <Button icon="sap-icon://excel-attachment" tooltip="{i18n>exportForms}" press=".onExportForms"/>
               <Button text="{i18n>next}" type="Emphasized" icon="sap-icon://navigation-right-arrow" iconFirst="false"
                       enabled="{= ${view>/selectedCount} > 0 &amp;&amp; ${app>/ready/all} }"
                       tooltip="{= ${app>/ready/all} ? '' : ${i18n>nextDisabledTip} }"
                       press=".onNext"/>
             </OverflowToolbar>
 
+            <MessageStrip text="{i18n>formsHint}" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
+                          visible="{= !${view>/formsError} }"/>
             <MessageStrip visible="{= !!${view>/formsError} }" text="{view>/formsError}" type="Error" showIcon="true"
+                          class="sapUiSmallMarginBottom"/>
+            <MessageStrip visible="{= !${app>/sys/IndexBuilt} }" text="{i18n>indexNotBuilt}" type="Warning" showIcon="true"
                           class="sapUiSmallMarginBottom"/>
 
             <Table id="formsTable" mode="MultiSelect" items="{path: 'view>/formsShown', templateShareable: false}"
-                   rememberSelections="false"
-                   growing="true" growingThreshold="100" growingScrollToLoad="true"
-                   busy="{view>/formsBusy}" busyIndicatorDelay="0"
-                   selectionChange=".onFormSelect" sticky="ColumnHeaders"
-                   noDataText="{i18n>noForms}" class="boltTable">
+                   rememberSelections="false" growing="true" growingThreshold="100" growingScrollToLoad="true"
+                   busy="{view>/formsBusy}" busyIndicatorDelay="0" selectionChange=".onFormSelect" sticky="ColumnHeaders"
+                   class="boltTable">
+              <noData>
+                <IllustratedMessage illustrationType="sapIllus-NoSearchResults" title="{i18n>noFormsTitle}"
+                                    description="{i18n>noForms}" enableVerticalResponsiveness="true"/>
+              </noData>
               <columns>
                 <Column width="14rem"><Text text="{i18n>colForm}"/></Column>
                 <Column><Text text="{i18n>colDescription}"/></Column>
@@ -122,28 +119,31 @@
                 <Column width="12rem" minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>colDriver}"/></Column>
                 <Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>colOutputTypes}"/></Column>
                 <Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colChanged}"/></Column>
-                <Column width="13rem"><Text text="{i18n>colMigration}"/></Column>
+                <Column width="16rem"><Text text="{i18n>colMigration}"/></Column>
               </columns>
               <items>
                 <ColumnListItem selected="{view>selected}" type="Inactive"
-                                highlight="{= ${view>InMigration} ? 'Information' : 'None' }">
+                                highlight="{= ${view>MigState} === 'ACTIVE' ? 'Information' : (${view>MigState} === 'STOPPED' ? 'Warning' : (${view>MigState} === 'COMPLETED' ? 'Success' : 'None')) }">
                   <cells>
                     <ObjectIdentifier title="{view>FormName}"/>
                     <Text text="{view>Description}"/>
                     <Text text="{view>DevPackage}"/>
-                    <Text text="{view>DriverProgram}"/>
-                    <Text text="{view>OutputTypes}"/>
-                    <Text text="{path: 'view>ChangedOn', formatter: '.formatter.yyyymmdd'}"/>
-                    <ObjectStatus text="{= ${view>InMigration} ? 'No. ' + ${view>MigrationSerial} + ' - ' + ${view>MigrationStatus} : ${i18n>available} }"
-                                  state="{= ${view>InMigration} ? 'Information' : 'Success' }"
-                                  active="{view>InMigration}" press=".onOpenMigrationFromForm"/>
+                    <Text text="{view>DriverProgs}" maxLines="2" tooltip="{view>DriverProgs}"/>
+                    <Text text="{view>OutputTypes}" maxLines="2" tooltip="{view>OutputTypes}"/>
+                    <VBox>
+                      <Text text="{path: 'view>ChangedOn', formatter: '.formatter.date'}"/>
+                      <Text text="{view>ChangedBy}" class="boltMuted"/>
+                    </VBox>
+                    <ObjectStatus text="{parts: ['view>MigState', 'view>LastSerialNo', 'view>LastStatus', 'view>LastRunNo'], formatter: '.formatter.formStateText'}"
+                                  state="{path: 'view>MigState', formatter: '.formatter.formStateState'}"
+                                  active="{= ${view>MigState} !== 'NONE' }" press=".onOpenMigrationFromForm"/>
                   </cells>
                 </ColumnListItem>
               </items>
             </Table>
           </IconTabFilter>
 
-          <!-- ============================================================ -->
+          <!-- ============================ MIGRATION ============================ -->
           <IconTabFilter key="migration" text="{i18n>tabMigration}" icon="sap-icon://journey-change" count="{view>/kpi/total}">
             <OverflowToolbar class="boltToolbar">
               <SearchField value="{view>/migSearch}" liveChange=".onMigrationSearch" width="18rem" placeholder="{i18n>searchMigrations}"/>
@@ -152,28 +152,32 @@
                   <SegmentedButtonItem key="all" text="{i18n>filterAll}"/>
                   <SegmentedButtonItem key="needs" text="{i18n>filterNeedsMe}"/>
                   <SegmentedButtonItem key="active" text="{i18n>filterActive}"/>
+                  <SegmentedButtonItem key="stopped" text="{i18n>filterStopped}"/>
                   <SegmentedButtonItem key="completed" text="{i18n>filterCompleted}"/>
                   <SegmentedButtonItem key="problems" text="{i18n>filterProblems}"/>
                 </items>
               </SegmentedButton>
-              <CheckBox text="{i18n>showWithdrawn}" selected="{view>/showWithdrawn}" select=".onMigrationFilter"/>
+              <CheckBox text="{i18n>showReplaced}" selected="{view>/showReplaced}" select=".onMigrationFilter"/>
               <ToolbarSpacer/>
-              <Text text="{path: 'app>/lastRefresh', formatter: '.formatLastRefresh'}" class="boltMuted"/>
-              <Button text="{i18n>importFromGithub}" icon="sap-icon://download-from-cloud" press=".onImport"
-                      tooltip="{i18n>importTip}" visible="{app>/isAdmin}"/>
+              <Text text="{view>/lastRefreshText}" class="boltMuted"/>
+              <Button icon="sap-icon://excel-attachment" tooltip="{i18n>exportMigrations}" press=".onExportMigrations"/>
               <Button text="{i18n>refreshStatuses}" icon="sap-icon://refresh" press=".onRefreshStatuses"/>
             </OverflowToolbar>
 
             <Table id="migrationTable" items="{path: 'view>/migrationsShown', templateShareable: false}"
                    busy="{view>/migBusy}" busyIndicatorDelay="0" growing="true" growingThreshold="50"
-                   sticky="ColumnHeaders" noDataText="{i18n>noMigrations}" class="boltTable">
+                   sticky="ColumnHeaders" class="boltTable">
+              <noData>
+                <IllustratedMessage illustrationType="sapIllus-EmptyList" title="{i18n>noMigrationsTitle}"
+                                    description="{i18n>noMigrations}" enableVerticalResponsiveness="true"/>
+              </noData>
               <columns>
                 <Column width="5rem"><Text text="{i18n>colSerial}"/></Column>
-                <Column width="13rem"><Text text="{i18n>colForm}"/></Column>
-                <Column width="5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colSystem}"/></Column>
-                <Column width="13rem"><Text text="{i18n>colStatus}"/></Column>
+                <Column width="16rem"><Text text="{i18n>colForm}"/></Column>
+                <Column width="4rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colRun}"/></Column>
+                <Column width="14rem"><Text text="{i18n>colStatus}"/></Column>
                 <Column width="7rem"><Text text="{i18n>colWaitingOn}"/></Column>
-                <Column minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>colNote}"/></Column>
+                <Column width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>colPickedUp}"/></Column>
                 <Column width="7rem" minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>colComplexity}"/></Column>
                 <Column width="5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colAge}"/></Column>
                 <Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>colUpdated}"/></Column>
@@ -184,14 +188,14 @@
                   <cells>
                     <ObjectNumber number="{view>SerialNo}"/>
                     <ObjectIdentifier title="{view>FormName}" text="{view>BranchName}"/>
-                    <Text text="{view>SystemId}"/>
+                    <Text text="{view>RunNo}"/>
                     <ObjectStatus text="{view>statusText}" state="{view>statusState}"
-                                  icon="{= ${view>StopFlag} === 'X' ? 'sap-icon://stop' : '' }"/>
-                    <Text text="{path: 'view>WaitingOn', formatter: '.formatter.waitingText'}"/>
-                    <Text text="{view>StatusNote}" maxLines="2" tooltip="{view>StatusNote}"/>
+                                  icon="{= ${view>isStopped} ? 'sap-icon://stop' : '' }"/>
+                    <Text text="{view>waitingText}"/>
+                    <Text text="{view>ClaimedBy}"/>
                     <ObjectStatus text="{path: 'view>Complexity', formatter: '.formatter.complexityText'}"
                                   state="{path: 'view>Complexity', formatter: '.formatter.complexityState'}"
-                                  tooltip="{view>ComplexityText}"/>
+                                  tooltip="{view>ComplexityInfo}"/>
                     <ObjectStatus text="{view>ageText}" state="{view>ageState}"/>
                     <Text text="{path: 'view>StatusUpdated', formatter: '.formatter.dateTime'}"/>
                   </cells>
@@ -200,159 +204,233 @@
             </Table>
           </IconTabFilter>
 
-          <!-- ============================================================ -->
+          <!-- ============================ CONFIGURATION ============================ -->
           <IconTabFilter key="config" text="{i18n>tabConfiguration}" icon="sap-icon://action-settings">
             <VBox class="boltConfig">
               <MessageStrip visible="{= !${app>/isAdmin} }" type="Information" showIcon="true"
                             text="{i18n>configReadOnly}" class="sapUiSmallMarginBottom"/>
+              <MessageStrip visible="{= ${app>/isAdmin} &amp;&amp; !${app>/sys/AdminsDefined} }" type="Warning" showIcon="true"
+                            text="{i18n>noAdminsYet}" class="sapUiSmallMarginBottom"/>
 
-              <!-- 1. Client -->
+              <!-- Client name (saved when the field is left, like Configure.jsx) -->
               <Panel headerText="{i18n>cfgClient}" class="boltPanel">
                 <VBox class="boltFields">
                   <Label text="{i18n>cfgClientName}" labelFor="cfgCustomer"/>
-                  <Input id="cfgCustomer" value="{view>/config/CustomerName}" placeholder="e.g. Dangote" editable="{app>/isAdmin}"/>
+                  <Input id="cfgCustomer" value="{view>/cfg/CustomerName}" placeholder="{i18n>cfgClientPlaceholder}"
+                         editable="{app>/isAdmin}" change=".onCustomerBlur"/>
+                  <Text text="{i18n>cfgClientHint}" class="boltHint"/>
                   <Label text="{i18n>cfgAdmins}" labelFor="cfgAdmins"/>
-                  <Input id="cfgAdmins" value="{view>/config/AdminUsers}" placeholder="{i18n>cfgAdminsPlaceholder}" editable="{app>/isAdmin}"/>
+                  <Input id="cfgAdmins" value="{view>/cfg/AdminUsers}" placeholder="{i18n>cfgAdminsPlaceholder}"
+                         editable="{app>/isAdmin}" change=".onAdminsBlur"/>
                   <Text text="{i18n>cfgAdminsHint}" class="boltHint"/>
                 </VBox>
               </Panel>
 
-              <!-- 2. AI provider -->
-              <Panel class="boltPanel">
-                <headerToolbar>
-                  <Toolbar>
-                    <Title text="{i18n>cfgAi}"/>
-                    <ToolbarSpacer/>
-                    <ObjectStatus text="{= ${view>/config/AiProvider} === 'NONE' ? ${i18n>builtIn} : ${path: 'app>/setup/AiStatus', formatter: '.formatter.connectionText'} }"
-                                  state="{= ${view>/config/AiProvider} === 'NONE' ? 'Success' : ${path: 'app>/setup/AiStatus', formatter: '.formatter.connectionState'} }"/>
-                  </Toolbar>
-                </headerToolbar>
-                <VBox class="boltFields">
-                  <Label text="{i18n>cfgAiProvider}" labelFor="cfgAiProvider"/>
-                  <Select id="cfgAiProvider" selectedKey="{view>/config/AiProvider}" enabled="{app>/isAdmin}" width="22rem">
-                    <core:Item key="NONE" text="{i18n>aiNone}"/>
-                    <core:Item key="OPENAI" text="{i18n>aiOpenAi}"/>
-                    <core:Item key="ANTHROPIC" text="{i18n>aiAnthropic}"/>
-                  </Select>
-                  <VBox visible="{= ${view>/config/AiProvider} !== 'NONE' }">
-                    <Label text="{= ${app>/setup/AiKeySet} === 'X' ? ${i18n>cfgAiKeySaved} : ${i18n>cfgAiKey} }" labelFor="cfgAiKey"/>
-                    <Input id="cfgAiKey" type="Password" value="{view>/aiKey}" editable="{app>/isAdmin}"
-                           placeholder="{= ${app>/setup/AiKeySet} === 'X' ? '•••••••• (unchanged)' : ${i18n>cfgAiKeyPlaceholder} }"/>
-                    <Label text="{i18n>cfgAiModel}" labelFor="cfgAiModel"/>
-                    <Input id="cfgAiModel" value="{view>/config/AiModel}" editable="{app>/isAdmin}"
-                           placeholder="{= ${view>/config/AiProvider} === 'ANTHROPIC' ? 'claude-sonnet-5-5' : 'gpt-4o-mini' }"/>
-                    <Label text="{i18n>cfgAiDestination}" labelFor="cfgAiDest"/>
-                    <Input id="cfgAiDest" value="{view>/config/AiDestination}" editable="{app>/isAdmin}" placeholder="e.g. ZBOLT_AI"/>
-                    <Label text="{i18n>cfgAiBasePath}" labelFor="cfgAiPath"/>
-                    <Input id="cfgAiPath" value="{view>/config/AiBasePath}" editable="{app>/isAdmin}" placeholder="/v1"/>
-                    <Label text="{i18n>cfgAiMaxTokens}" labelFor="cfgAiTokens"/>
-                    <StepInput id="cfgAiTokens" value="{view>/config/AiMaxTokens}" min="16" max="64000" step="100" editable="{app>/isAdmin}" width="12rem"/>
-                    <Text text="{= ${view>/config/AiProvider} === 'ANTHROPIC' ? ${i18n>aiAnthropicHelp} : ${i18n>aiOpenAiHelp} }" class="boltHint"/>
+              <!-- 1. Connections -->
+              <Title text="{i18n>cfgConnections}" level="H2" class="boltSection"/>
+              <HBox wrap="Wrap" class="boltCards">
+                <!-- GitHub (GitHubConnection.jsx) -->
+                <Panel class="boltPanel boltCard">
+                  <headerToolbar>
+                    <Toolbar>
+                      <Title text="{i18n>cfgGithub}"/>
+                      <ToolbarSpacer/>
+                      <ObjectStatus text="{= ${app>/ready/github} ? ${i18n>connected} : ${i18n>notConnected} }"
+                                    state="{= ${app>/ready/github} ? 'Success' : 'None' }"/>
+                    </Toolbar>
+                  </headerToolbar>
+                  <VBox class="boltFields">
+                    <VBox visible="{app>/ready/github}">
+                      <Text text="{i18n>connectedAs} {app>/setup/GhLogin} ({app>/setup/GhUserName})" class="boltStrong"/>
+                      <Text text="{= ${app>/setup/GhScopes} ? ${i18n>tokenScopes} + ' ' + ${app>/setup/GhScopes} : ${i18n>fineGrained} }" class="boltHint"/>
+                      <Button text="{i18n>disconnect}" press=".onDisconnectGitHub" enabled="{app>/isAdmin}" class="sapUiTinyMarginTop"/>
+                    </VBox>
+                    <VBox visible="{= !${app>/ready/github} }">
+                      <Label text="{i18n>cfgToken}" labelFor="cfgToken"/>
+                      <Input id="cfgToken" type="Password" value="{view>/token}" editable="{app>/isAdmin}"
+                             placeholder="github_pat_… or ghp_…" submit=".onConnectGitHub"/>
+                      <Text text="{i18n>cfgTokenHint}" class="boltHint"/>
+                      <Button text="{i18n>connect}" type="Emphasized" press=".onConnectGitHub"
+                              enabled="{= ${app>/isAdmin} &amp;&amp; !!${view>/token} &amp;&amp; !${view>/cfgBusy} }" class="sapUiTinyMarginTop"/>
+                    </VBox>
+                    <Link text="{i18n>howToken}" press=".onTokenHelp" class="sapUiTinyMarginTop"/>
                   </VBox>
-                  <Text text="{= ${view>/config/AiProvider} === 'NONE' ? ${i18n>aiNoneHelp} : '' }" class="boltHint"
-                        visible="{= ${view>/config/AiProvider} === 'NONE' }"/>
-                  <HBox alignItems="Center" class="sapUiTinyMarginTop">
-                    <Button text="{i18n>testConnection}" press=".onTestAi" enabled="{= !${view>/configBusy} }"/>
-                    <Text text="{app>/setup/AiStatusText}" class="boltInlineMsg"/>
-                  </HBox>
-                </VBox>
-              </Panel>
+                </Panel>
 
-              <!-- 3. GitHub -->
-              <Panel class="boltPanel">
-                <headerToolbar>
-                  <Toolbar>
-                    <Title text="{i18n>cfgGithub}"/>
-                    <ToolbarSpacer/>
-                    <ObjectStatus text="{path: 'app>/setup/GhStatus', formatter: '.formatter.connectionText'}"
-                                  state="{path: 'app>/setup/GhStatus', formatter: '.formatter.connectionState'}"/>
-                  </Toolbar>
-                </headerToolbar>
-                <VBox class="boltFields">
-                  <Label text="{i18n>cfgGhDestination}" labelFor="cfgGhDest" required="true"/>
-                  <Input id="cfgGhDest" value="{view>/config/GhDestination}" editable="{app>/isAdmin}" placeholder="e.g. ZBOLT_GITHUB"/>
-                  <Text text="{i18n>cfgGhDestinationHint}" class="boltHint"/>
-                  <Label text="{i18n>cfgGhOwner}" labelFor="cfgGhOwner" required="true"/>
-                  <Input id="cfgGhOwner" value="{view>/config/GhOwner}" editable="{app>/isAdmin}" placeholder="e.g. VernasoftTechie"/>
-                  <Label text="{i18n>cfgGhRepo}" labelFor="cfgGhRepo" required="true"/>
-                  <Input id="cfgGhRepo" value="{view>/config/GhRepo}" editable="{app>/isAdmin}" placeholder="e.g. Smartform-Adobe-Migration"/>
-                  <Label text="{i18n>cfgGhBase}" labelFor="cfgGhBase"/>
-                  <Input id="cfgGhBase" value="{view>/config/GhBaseBranch}" editable="{app>/isAdmin}" placeholder="main"/>
-                  <Label text="{i18n>cfgGhPrefix}" labelFor="cfgGhPrefix"/>
-                  <Input id="cfgGhPrefix" value="{view>/config/GhBranchPrefix}" editable="{app>/isAdmin}" placeholder="vernasofttechie"/>
-                  <Text text="{= ${i18n>cfgGhPrefixHint} + ' ' + ${path: 'view>/config/GhBranchPrefix', formatter: '.formatter.branchExample'} }"
-                        class="boltHint"/>
-                  <HBox alignItems="Center" class="sapUiTinyMarginTop">
-                    <Button text="{i18n>checkAccess}" press=".onTestGitHub" enabled="{= !${view>/configBusy} }"/>
-                    <Text text="{app>/setup/GhStatusText}" class="boltInlineMsg"/>
-                  </HBox>
-                </VBox>
-              </Panel>
-
-              <!-- 4. Form scope -->
-              <Panel headerText="{i18n>cfgScope}" class="boltPanel">
-                <VBox class="boltFields">
-                  <Label text="{i18n>cfgPrefix1}" labelFor="cfgPrefix1"/>
-                  <Input id="cfgPrefix1" value="{view>/config/FormPrefix1}" maxLength="10" editable="{app>/isAdmin}" width="8rem"/>
-                  <Label text="{i18n>cfgPrefix2}" labelFor="cfgPrefix2"/>
-                  <Input id="cfgPrefix2" value="{view>/config/FormPrefix2}" maxLength="10" editable="{app>/isAdmin}" width="8rem"/>
-                  <CheckBox text="{i18n>cfgCountVolume}" selected="{view>/config/countVolume}" editable="{app>/isAdmin}"/>
-                </VBox>
-              </Panel>
-
+                <!-- AI provider (AiSettings.jsx) -->
+                <Panel class="boltPanel boltCard">
+                  <headerToolbar>
+                    <Toolbar>
+                      <Title text="{i18n>cfgAi}"/>
+                      <ToolbarSpacer/>
+                      <ObjectStatus text="{= ${app>/ready/ai} ? ${i18n>ready} : ${i18n>needsKey} }"
+                                    state="{= ${app>/ready/ai} ? 'Success' : 'Warning' }"/>
+                    </Toolbar>
+                  </headerToolbar>
+                  <VBox class="boltFields">
+                    <Text text="{view>/ai/currentText}" class="boltHint"/>
+                    <Label text="{i18n>cfgAiProvider}" labelFor="cfgAiProvider"/>
+                    <Select id="cfgAiProvider" selectedKey="{view>/ai/Provider}" enabled="{app>/isAdmin}" width="22rem" change=".onAiProviderChange">
+                      <core:Item key="mock" text="{i18n>aiMock}"/>
+                      <core:Item key="openai" text="{i18n>aiOpenAi}"/>
+                      <core:Item key="anthropic" text="{i18n>aiAnthropic}"/>
+                    </Select>
+                    <VBox visible="{= ${view>/ai/Provider} !== 'mock' }">
+                      <Label text="{= ${view>/ai/keySaved} ? ${i18n>cfgAiKeySaved} : ${i18n>cfgAiKey} }" labelFor="cfgAiKey"/>
+                      <Input id="cfgAiKey" type="Password" value="{view>/ai/ApiKey}" editable="{app>/isAdmin}"
+                             placeholder="{= ${view>/ai/keySaved} ? ${i18n>keyUnchanged} : ${i18n>cfgAiKeyPlaceholder} }"/>
+                    </VBox>
+                    <Label text="{i18n>cfgAiModel}" labelFor="cfgAiModel"/>
+                    <Input id="cfgAiModel" value="{view>/ai/Model}" editable="{app>/isAdmin}" placeholder="{view>/ai/defaultModel}"/>
+                    <VBox visible="{= ${view>/ai/Provider} !== 'mock' }">
+                      <Label text="{i18n>cfgAiBaseUrl}" labelFor="cfgAiUrl"/>
+                      <Input id="cfgAiUrl" value="{view>/ai/BaseUrl}" editable="{app>/isAdmin}" placeholder="{i18n>cfgAiBaseUrlPlaceholder}"/>
+                      <Label text="{i18n>cfgAiMaxTokens}" labelFor="cfgAiTokens"/>
+                      <StepInput id="cfgAiTokens" value="{view>/ai/MaxTokens}" min="16" max="64000" step="256" editable="{app>/isAdmin}" width="12rem"/>
+                    </VBox>
+                    <Text text="{= ${view>/ai/Provider} === 'anthropic' ? ${i18n>aiAnthropicHelp} : (${view>/ai/Provider} === 'openai' ? ${i18n>aiOpenAiHelp} : ${i18n>aiMockHelp}) }" class="boltHint"/>
+                    <Text visible="{view>/ai/blockedForKey}" text="{i18n>enterKeyFirst}" class="boltHint"/>
+                    <HBox alignItems="Center" wrap="Wrap" class="sapUiTinyMarginTop boltButtons">
+                      <Button text="{i18n>testConnection}" press=".onTestAi" enabled="{= ${app>/isAdmin} &amp;&amp; !${view>/cfgBusy} &amp;&amp; !${view>/ai/blockedForKey} }"/>
+                    </HBox>
+                    <MessageStrip visible="{= !!${view>/ai/testText} }" text="{view>/ai/testText}"
+                                  type="{= ${view>/ai/testOk} ? 'Success' : 'Error' }" showIcon="true"/>
+                  </VBox>
+                </Panel>
+              </HBox>
               <HBox alignItems="Center" class="boltSaveBar">
-                <Button text="{i18n>save}" type="Emphasized" press=".onSaveConfig" enabled="{= ${app>/isAdmin} &amp;&amp; !${view>/configBusy} }"/>
-                <Text text="{view>/configMessage}" class="boltInlineMsg"/>
+                <Button text="{i18n>save}" type="Emphasized" press=".onSaveAi"
+                        enabled="{= ${app>/isAdmin} &amp;&amp; !${view>/cfgBusy} &amp;&amp; !${view>/ai/blockedForKey} }"/>
+                <Text text="{i18n>saveAiHint}" class="boltInlineMsg"/>
               </HBox>
 
-              <!-- 5. SAP systems -->
-              <Panel class="boltPanel">
+              <!-- 2. Repository (TargetRepo.jsx) - gated until GitHub and AI are ready -->
+              <Title text="{i18n>cfgRepository}" level="H2" class="boltSection"/>
+              <MessageStrip visible="{= !(${app>/ready/github} &amp;&amp; ${app>/ready/ai}) }" type="Information" showIcon="true"
+                            text="{i18n>repoGated}" class="sapUiSmallMarginBottom"/>
+              <Panel class="boltPanel" visible="{= ${app>/ready/github} &amp;&amp; ${app>/ready/ai} }">
                 <headerToolbar>
                   <Toolbar>
-                    <Title text="{i18n>cfgSystems}"/>
+                    <Title text="{i18n>cfgTargetRepo}"/>
                     <ToolbarSpacer/>
-                    <Button text="{i18n>addSystem}" icon="sap-icon://add" press=".onAddSystem" visible="{app>/isAdmin}"/>
+                    <Link text="{app>/sys/RepoUrl}" href="{app>/sys/RepoUrl}" target="_blank" visible="{= !!${app>/sys/RepoUrl} }"/>
                   </Toolbar>
                 </headerToolbar>
-                <Text text="{i18n>cfgSystemsHint}" class="boltHint sapUiSmallMarginBottom"/>
-                <Table items="{path: 'app>/systems', templateShareable: false}" noDataText="{i18n>noSystems}" class="boltTable">
-                  <columns>
-                    <Column width="5rem"><Text text="{i18n>colSystem}"/></Column>
-                    <Column><Text text="{i18n>colDescription}"/></Column>
-                    <Column width="4rem"><Text text="{i18n>colClient}"/></Column>
-                    <Column width="9rem"><Text text="{i18n>colDestination}"/></Column>
-                    <Column width="6rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colLocal}"/></Column>
-                    <Column width="8rem"><Text text="{i18n>colStatus}"/></Column>
-                    <Column width="9rem" hAlign="End"><Text text=""/></Column>
-                  </columns>
-                  <items>
-                    <ColumnListItem>
-                      <cells>
-                        <ObjectIdentifier title="{app>SystemId}" text="{= ${app>IsDefault} === 'X' ? 'Default' : '' }"/>
-                        <VBox>
-                          <Text text="{app>Description}"/>
-                          <Text text="{app>BaseUrl}" class="boltMuted"/>
-                        </VBox>
-                        <Text text="{app>SapClient}"/>
-                        <Text text="{= ${app>IsLocal} === 'X' ? '—' : ${app>Destination} }"/>
-                        <Text text="{= ${app>IsLocal} === 'X' ? ${i18n>yes} : ${i18n>no} }"/>
-                        <ObjectStatus text="{path: 'app>Status', formatter: '.formatter.connectionText'}"
-                                      state="{path: 'app>Status', formatter: '.formatter.connectionState'}"
-                                      tooltip="{app>StatusText}"/>
-                        <HBox justifyContent="End">
-                          <Button text="{i18n>test}" press=".onTestSystem" type="Transparent"/>
-                          <Button icon="sap-icon://edit" press=".onEditSystem" type="Transparent" visible="{app>/isAdmin}" tooltip="{i18n>edit}"/>
-                          <Button icon="sap-icon://delete" press=".onDeleteSystem" type="Transparent" visible="{app>/isAdmin}" tooltip="{i18n>delete}"/>
-                        </HBox>
-                      </cells>
-                    </ColumnListItem>
-                  </items>
-                </Table>
+                <VBox class="boltFields">
+                  <Label text="{i18n>cfgRepo}" labelFor="cfgRepo" required="true"/>
+                  <Input id="cfgRepo" value="{view>/repo/Repo}" editable="{app>/isAdmin}" placeholder="{i18n>cfgRepoPlaceholder}"/>
+                  <Label text="{i18n>cfgBranchPrefix}" labelFor="cfgPrefix"/>
+                  <Input id="cfgPrefix" value="{view>/repo/BranchPrefix}" editable="{app>/isAdmin}" placeholder="vernasofttechie" liveChange=".onPrefixLive"/>
+                  <Text text="{= ${i18n>cfgPrefixHint} + ' ' + ${path: 'view>/repo/BranchPrefix', formatter: '.formatter.branchExample'} }" class="boltHint"/>
+                  <HBox wrap="Wrap" alignItems="Center" class="sapUiTinyMarginTop boltButtons">
+                    <Button text="{i18n>checkAccess}" press=".onCheckRepo" enabled="{= ${app>/isAdmin} &amp;&amp; !!${view>/repo/Repo} &amp;&amp; !${view>/cfgBusy} }"/>
+                    <Button text="{i18n>createRepo}" icon="sap-icon://add" press=".onCreateRepo" enabled="{= ${app>/isAdmin} &amp;&amp; !!${view>/repo/Repo} &amp;&amp; !${view>/cfgBusy} }"/>
+                  </HBox>
+                  <MessageStrip visible="{= !!${view>/repo/checkText} }" text="{view>/repo/checkText}"
+                                type="{= ${view>/repo/checkOk} ? 'Success' : 'Warning' }" showIcon="true"/>
+                  <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                    <Button text="{i18n>saveRepo}" type="Emphasized" press=".onSaveRepo"
+                            enabled="{= ${app>/isAdmin} &amp;&amp; !!${view>/repo/Repo} &amp;&amp; !${view>/cfgBusy} }"/>
+                    <Text text="{= ${app>/setup/GhRepo} ? ${i18n>savedRepo} + ' ' + ${app>/setup/GhRepo} : '' }" class="boltInlineMsg"/>
+                  </HBox>
+                </VBox>
+              </Panel>
+
+              <!-- Global reference library (GlobalLibrary.jsx) -->
+              <Panel class="boltPanel" visible="{= ${app>/ready/repo} }">
+                <headerToolbar>
+                  <Toolbar>
+                    <Title text="{i18n>cfgLibrary}"/>
+                    <ToolbarSpacer/>
+                    <Text text="{app>/setup/LibFolder}" class="boltMuted"/>
+                  </Toolbar>
+                </headerToolbar>
+                <VBox class="boltFields">
+                  <Text text="{i18n>libHint}" class="boltHint"/>
+                  <Label text="{i18n>libCategory}" labelFor="libCategory"/>
+                  <Select id="libCategory" selectedKey="{view>/lib/Category}" enabled="{app>/isAdmin}" width="22rem">
+                    <core:Item key="logo" text="{i18n>libLogo}"/>
+                    <core:Item key="smartstyle" text="{i18n>libStyle}"/>
+                    <core:Item key="naming_standard" text="{i18n>libNaming}"/>
+                    <core:Item key="policy" text="{i18n>libPolicy}"/>
+                  </Select>
+                  <VBox id="libDrop" class="boltDrop">
+                    <customData><core:CustomData key="bolt-drop" value="view|/lib/files" writeToDom="true"/></customData>
+                    <HBox alignItems="Center" wrap="Wrap">
+                      <core:Icon src="sap-icon://upload" class="boltDropIcon"/>
+                      <Text text="{i18n>dropHere}" class="boltDropText"/>
+                      <u:FileUploader buttonOnly="true" buttonText="{i18n>chooseFiles}" multiple="true" sameFilenameAllowed="true"
+                                      change=".onLibFiles" enabled="{app>/isAdmin}" icon="sap-icon://attachment"/>
+                    </HBox>
+                    <List items="{path: 'view>/lib/files', templateShareable: false}" mode="Delete" delete=".onLibUnstage"
+                          visible="{= ${view>/lib/files}.length > 0 }" showNoData="false" class="boltStaged">
+                      <StandardListItem title="{view>name}" info="{path: 'view>size', formatter: '.formatter.bytes'}" icon="sap-icon://document"/>
+                    </List>
+                  </VBox>
+                  <Label text="{i18n>libProvenance}" labelFor="libProvenance"/>
+                  <Input id="libProvenance" value="{view>/lib/Provenance}" editable="{app>/isAdmin}" placeholder="{i18n>libProvenancePlaceholder}"/>
+                  <Button text="{= ${i18n>uploadTo} + ' ' + ${path: 'view>/lib/Category', formatter: '.libFolder'} }" type="Emphasized"
+                          press=".onLibUpload" class="sapUiTinyMarginTop"
+                          enabled="{= ${app>/isAdmin} &amp;&amp; ${view>/lib/files}.length > 0 &amp;&amp; !${view>/cfgBusy} }"/>
+                  <Table items="{path: 'view>/library', templateShareable: false}" class="boltTable sapUiSmallMarginTop">
+                    <noData>
+                      <IllustratedMessage illustrationType="sapIllus-NoData" illustrationSize="Dot" title="{i18n>libEmpty}"/>
+                    </noData>
+                    <columns>
+                      <Column width="10rem"><Text text="{i18n>libCategory}"/></Column>
+                      <Column><Text text="{i18n>colFile}"/></Column>
+                      <Column width="6rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colSize}"/></Column>
+                      <Column minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>libProvenance}"/></Column>
+                      <Column width="9rem"><Text text="{i18n>colGitHub}"/></Column>
+                      <Column width="4rem" hAlign="End"><Text text=""/></Column>
+                    </columns>
+                    <items>
+                      <ColumnListItem>
+                        <cells>
+                          <Text text="{path: 'view>LibCategory', formatter: '.libFolder'}"/>
+                          <ObjectIdentifier title="{view>FileName}" text="{view>FilePath}"/>
+                          <Text text="{path: 'view>SizeBytes', formatter: '.formatter.bytes'}"/>
+                          <Text text="{view>Provenance}"/>
+                          <ObjectStatus text="{= ${view>Pushed} ? ${i18n>pushed} : ${i18n>notPushed} }"
+                                        state="{= ${view>Pushed} ? 'Success' : 'Warning' }" tooltip="{view>PushMsg}"/>
+                          <Button icon="sap-icon://delete" type="Transparent" tooltip="{i18n>libRemove}" press=".onLibRemove" visible="{app>/isAdmin}"/>
+                        </cells>
+                      </ColumnListItem>
+                    </items>
+                  </Table>
+                </VBox>
+              </Panel>
+
+              <!-- Advanced: the SAP side of the connections and the conventions -->
+              <Panel headerText="{i18n>cfgAdvanced}" expandable="true" expanded="false" class="boltPanel">
+                <VBox class="boltFields">
+                  <Text text="{i18n>cfgAdvancedHint}" class="boltHint"/>
+                  <Label text="{i18n>cfgGhApiUrl}" labelFor="cfgApi"/>
+                  <Input id="cfgApi" value="{view>/cfg/GhApiUrl}" editable="{app>/isAdmin}" placeholder="https://api.github.com"/>
+                  <Label text="{i18n>cfgSslId}" labelFor="cfgSsl"/>
+                  <Input id="cfgSsl" value="{view>/cfg/SslId}" editable="{app>/isAdmin}" placeholder="ANONYM" maxLength="6" width="10rem"/>
+                  <Text text="{i18n>cfgSslHint}" class="boltHint"/>
+                  <Label text="{i18n>cfgGhDest}" labelFor="cfgGhDest"/>
+                  <Input id="cfgGhDest" value="{view>/cfg/GhDest}" editable="{app>/isAdmin}" placeholder="{i18n>optional}" maxLength="32" width="16rem"/>
+                  <Label text="{i18n>cfgAiDest}" labelFor="cfgAiDest"/>
+                  <Input id="cfgAiDest" value="{view>/cfg/AiDest}" editable="{app>/isAdmin}" placeholder="{i18n>optional}" maxLength="32" width="16rem"/>
+                  <Text text="{i18n>cfgDestHint}" class="boltHint"/>
+                  <Label text="{i18n>cfgStatusFolder}" labelFor="cfgStatusFolder"/>
+                  <Input id="cfgStatusFolder" value="{view>/cfg/StatusFolder}" editable="{app>/isAdmin}" placeholder="docs/legacy_grab"/>
+                  <Text text="{i18n>cfgStatusFolderHint}" class="boltHint"/>
+                  <Label text="{i18n>cfgLibFolder}" labelFor="cfgLibFolder"/>
+                  <Input id="cfgLibFolder" value="{view>/cfg/LibFolder}" editable="{app>/isAdmin}" placeholder="docs/global_data"/>
+                  <Label text="{i18n>cfgPrefixes}" labelFor="cfgPrefixes"/>
+                  <Input id="cfgPrefixes" value="{view>/cfg/FormPrefixes}" editable="{app>/isAdmin}" placeholder="Z,Y" width="10rem"/>
+                  <CheckBox text="{i18n>cfgCountVolume}" selected="{view>/cfg/CountVolume}" editable="{app>/isAdmin}"/>
+                  <Button text="{i18n>saveAdvanced}" press=".onSaveAdvanced" enabled="{= ${app>/isAdmin} &amp;&amp; !${view>/cfgBusy} }"
+                          class="sapUiSmallMarginTop"/>
+                </VBox>
               </Panel>
             </VBox>
           </IconTabFilter>
 
-          <!-- ============================================================ -->
+          <!-- ============================ HELP ============================ -->
           <IconTabFilter key="help" text="{i18n>tabHelp}" icon="sap-icon://sys-help">
             <FormattedText htmlText="{i18n>helpHtml}" class="boltHelp"/>
           </IconTabFilter>

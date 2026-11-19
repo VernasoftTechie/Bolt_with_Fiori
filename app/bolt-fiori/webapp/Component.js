@@ -11,18 +11,16 @@ sap.ui.define([
     init: function () {
       UIComponent.prototype.init.apply(this, arguments);
 
-      // Shared app state: connection readiness (the header indicator and the
-      // gate on "Next"), the setup row and the source systems. Every view reads
-      // it as model "app"; the OData V4 model is named "odata" (Playbook U1).
+      // Shared app state: the system the app runs in (no system selection -
+      // the logged-on system is the source of the Smart Forms), the setup row
+      // and the connection readiness (header chips, LIVE, the gate on "Next").
+      // Every view reads it as model "app"; the OData V4 model is "odata".
       this.setModel(new JSONModel({
         busy: false,
-        customer: "",
-        isAdmin: true,
+        sys: {},
         setup: {},
-        systems: [],
-        ready: { github: false, ai: false, system: false, all: false },
-        lastRefresh: null,
-        autoRefresh: false
+        isAdmin: false,
+        ready: { github: false, repo: false, ai: false, all: false }
       }), "app");
 
       this.service = service.create(this.getModel("odata"));

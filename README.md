@@ -1,57 +1,51 @@
-# Bolt with Fiori
+# Bolt — Smart Form to Adobe Form migration console (RAP + Fiori)
 
-**Smart Form → Adobe Form migration console on SAP Fiori + RAP.** This replaces the Bolt Console web
-application. It uses the same process and the same GitHub branches and status files, but there are
-no legacy files to download or upload and no server to host.
+Replaces the Bolt Console web app with an app that runs **inside the client's SAP system**:
 
-The client picks Smart Forms from their own system (DEV, QA or PRD) on one screen and commits the
-selection. For each form, the app runs the legacy grab and the Smart Form XML export on the source
-system and pushes them, with the driver program sources and a status file, to a new branch in the
-client's migration repository on GitHub. The Vernasoft engineer works the branch exactly as
-before. The client follows every migration live in the Migration tab and answers there: confirm,
-report a problem, ask, request a change, stop, resume.
+- **Smart Forms** — every custom Smart Form of the system the app is launched in. Select, Next,
+  Commit: each form gets a serial number and a GitHub branch, and its legacy files (legacy grab,
+  driver sources, Smart Form XML, Smart Styles) are produced in SAP and sent automatically.
+- **Migration** — live status of every migration from its branch status file; the communication
+  panel to answer the migration engineer (confirm, problem, question, change, concern, files),
+  stop / resume, legacy documents, status history.
+- **Configuration** — GitHub, AI provider, target repository, global reference library;
+  administrators only. Everything client-specific lives here.
+
+The engineer side is unchanged: engineer windows work from the branches and status files exactly as
+with the web app.
 
 | | |
 |---|---|
-| Platform | SAP S/4HANA 2023 on-premise (SAP_BASIS 7.58), standard ABAP, RAP OData V4 |
-| UI | Freestyle SAPUI5 1.120, one dashboard with tabs + migration detail, BSP `ZBOLT_FIORI` |
-| ABAP package | `ZBOLT_FIORI` — objects `Z*BOLT*` |
-| Service | `ZBOLT_UI` / binding `ZBOLT_UI_O4` |
-| Status | **Version 1 — built, UI verified against the mock; first SAP activation pending** (see `docs/05_build_notes.md`) |
+| ABAP | package `ZSFTAD_BOLT`, objects `ZAB*` (DIL naming), S/4HANA 2023, RAP managed BOs, OData V4 |
+| Service | `ZAB_UI_BOLT` / binding `ZAB_UI_BOLT_O4` |
+| Fiori | freestyle SAPUI5 ≥ 1.120, `app/bolt-fiori`, BSP `ZSFTAD_BOLT` or BTP HTML5 repository |
 
 ## Start here
 
 | You are | Read |
 |---|---|
-| The client's Basis / network / security team | [`docs/03_client_connectivity.md`](docs/03_client_connectivity.md) — what we need from you to connect SAP to GitHub |
-| The Fiori / ABAP consultant installing it | [`docs/04_installation.md`](docs/04_installation.md) |
-| The client's operator | [`docs/02_operator_guide.md`](docs/02_operator_guide.md) |
-| A developer changing it | [`docs/01_architecture.md`](docs/01_architecture.md), [`docs/05_build_notes.md`](docs/05_build_notes.md), [`CLAUDE.md`](CLAUDE.md) |
+| installing it (ABAP, Basis, Fiori) | [docs/04_installation.md](docs/04_installation.md) |
+| the client's network / Basis / security team | [docs/03_client_connectivity.md](docs/03_client_connectivity.md) |
+| a user of the app | [docs/02_operator_guide.md](docs/02_operator_guide.md) |
+| developing it | [CLAUDE.md](CLAUDE.md), [docs/01_architecture.md](docs/01_architecture.md), [docs/05_build_notes.md](docs/05_build_notes.md), [docs/06_naming.md](docs/06_naming.md), [docs/07_recheck_matrix.md](docs/07_recheck_matrix.md) |
+
+Discussion notes and earlier documents: [docs/discussion/](docs/discussion/).
 
 ## Repository layout
 
-```
-src/                 ABAP objects (abapGit, STARTING_FOLDER /src/)
-  zbolt_*.tabl.xml     tables: setup, systems, migrations, log, files, secret, driver index
-  zi_/zc_bolt_*        CDS + behaviour: Migration (+log, +files), Setup, SourceSystem
-  zce_bolt_*           custom entities: SmartForm (UI list), SourceForm / SourceFile (source API)
-  za_bolt_*            action parameters
-  zcl_bolt_*           GitHub client, status file, legacy grab (port), XML export, source reader,
-                       AI client, migration service, query providers, config, HTTP
-  zbolt_r_*            reports: background sync, driver index, setup defaults
-  zbolt_ui*            service definition + binding
-app/bolt-fiori/      SAPUI5 app (ui5.yaml, ui5-deploy.yaml, webapp/)
-tools/
-  gen_metadata.mjs     writes the abapGit .xml/.baseinfo for every source in src/
-  mock/mock-server.mjs local mock of the whole OData service (example data) for UI work and demos
-docs/                architecture, operator guide, client connectivity, installation, build notes
-```
+| Path | Content |
+|---|---|
+| `src/` | all ABAP objects (abapGit, `.abapgit.xml`) |
+| `app/bolt-fiori/` | the Fiori app (`ui5-deploy.yaml` on-premise, `mta.yaml` BTP) |
+| `tools/gen_ddic.mjs` | generates every domain, data element and table (single source of the DDIC) |
+| `tools/gen_metadata.mjs` | generates the abapGit metadata of the other objects, checks DIL names |
+| `tools/make_install_branches.mjs` | builds `install/1-ddic` … `install/4-service` from `main` |
+| `tools/mock/mock-server.mjs` | local mock of the OData service for UI work: `node tools/mock/mock-server.mjs` → http://localhost:8099 |
+| `docs/` | guides, decisions, issue log |
 
-## Try the UI without SAP
+## Branches
 
-```bash
-node tools/mock/mock-server.mjs
-```
-
-Then open `http://localhost:8099/index.html`. Everything works against example data: selecting forms,
-commit and send, the migration list, confirm and concerns, and the configuration screens.
+`main` is the complete app. `install/1-ddic`, `install/2-logic`, `install/3-rap`,
+`install/4-service` are cumulative subsets of `main` for the first installation, increment by
+increment (DDIC first). They are rebuilt from `main` by `tools/make_install_branches.mjs` — never
+commit to them directly.

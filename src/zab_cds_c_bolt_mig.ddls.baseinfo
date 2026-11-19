@@ -1,0 +1,14 @@
+{
+  "BASEINFO": {
+    "FROM": [
+      "ZAB_CDS_I_BOLT_MIG"
+    ],
+    "ASSOCIATED": [
+      "ZAB_CDS_C_BOLT_FILE",
+      "ZAB_CDS_C_BOLT_HIST"
+    ],
+    "BASE": [
+      "ZAB_CDS_I_BOLT_MIG"
+    ]
+  }
+}

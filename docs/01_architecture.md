@@ -1,110 +1,86 @@
-# Architecture
+# Architecture — version 2
 
-Bolt with Fiori replaces the Bolt Console web application (Node + React, hosted on a server) with
-a **RAP + Fiori** application inside the client's SAP system. The process is the same as the web
-app's. Three things change:
-
-1. **No manual legacy-grab download or upload.** The app runs the legacy grab and the Smart Form XML
-   export itself, on the chosen source system, and pushes the files to GitHub.
-2. **Logs live in SAP.** Every migration, its status-file timeline and this app's own events are in
-   SAP tables (`ZBOLT_MIG`, `ZBOLT_MIGLOG`, `ZBOLT_MIGFILE`).
-3. **Nothing to host.** The UI is a Fiori app on the Launchpad, the backend is the ABAP stack.
-
-The engineer side does not change at all. The engineer windows read and write only GitHub — the
-branch and its status file `docs/legacy_grab/<slug>_status.md`. The app writes exactly the same
-branch names, folder layout and status-file format as the web app (`ZCL_BOLT_STATUS_FILE` is a
-line-for-line port of `statusParse.js`, with unit tests).
-
-## Components
+Bolt replaces the Bolt Console web app with a RAP + SAPUI5 app that runs **inside the client's SAP
+system** — the system the app is launched in is the source of the Smart Forms (no system selection).
+The engineer side is unchanged: engineer windows work from the GitHub branches and their status
+files exactly as before.
 
 ```
- Fiori app (BSP ZBOLT_FIORI, freestyle SAPUI5)
-   │  OData V4: /sap/opu/odata4/sap/zbolt_ui_o4/srvd/sap/zbolt_ui/0001/
-   ▼
- Service ZBOLT_UI (binding ZBOLT_UI_O4)
-   ├─ Migration ─┬─ MigrationLog      managed RAP BO ZI_BOLT_MIGRATION  (ZBOLT_MIG, _MIGLOG, _MIGFILE)
-   │             └─ MigrationFile     actions: commitSelection, pushToGitHub, refreshStatus, refreshAll,
-   │                                  confirmManual, raiseConcern, setStop, addReferenceFile,
-   │                                  withdraw, importFromGitHub, aiSummary
-   ├─ Setup                           managed RAP BO ZI_BOLT_SETUP (ZBOLT_SETUP; key -> ZBOLT_SECRET)
-   ├─ SourceSystem                    managed RAP BO ZI_BOLT_SYSTEM (ZBOLT_SYSTEM)  DEV / QA / PRD
-   ├─ SmartForm                       custom entity  (list for the selected system + migration state)
-   ├─ SourceForm   ┐ source API: the same service on QA/PRD answers these two for the app in DEV
-   └─ SourceFile   ┘
-         │
-         ▼
- ZCL_BOLT_MIGRATION_SVC ── ZCL_BOLT_GITHUB ── ZCL_BOLT_HTTP ── SM59 ZBOLT_GITHUB ── api.github.com
-         │              └─ ZCL_BOLT_STATUS_FILE (format)
-         ├─ ZCL_BOLT_SOURCE ─ this system: ZCL_BOLT_LEGACY_GRAB + ZCL_BOLT_FORM_EXPORT
-         │                  └ QA/PRD: OData SourceForm/SourceFile through SM59 ZBOLT_QA / ZBOLT_PRD
-         └─ ZCL_BOLT_AI ── SM59 ZBOLT_AI ── OpenAI-compatible / Anthropic
- Reports: ZBOLT_R_SYNC (background send + status sync), ZBOLT_R_DRIVER_INDEX, ZBOLT_R_SETUP
+ Client user (Fiori launchpad, on-premise or BTP Work Zone)
+        │  OData V4  /sap/opu/odata4/sap/zab_ui_bolt_o4/srvd/sap/zab_ui_bolt/0001/
+        ▼
+ ┌──────────────────────────── client's S/4 system (package ZSFTAD_BOLT) ─────────────────────────┐
+ │ RAP business objects            Query providers (read only)                                   │
+ │  Migration ─┬ History            SmartForm   ← ZCL_AB_BOLT_FORM_CATALOG (TADIR/STXFADM/TNAPR)  │
+ │             └ File               StatusFile  ┐                                                 │
+ │  Setup (+ saver for secrets)     Timeline    ┘← the branch status file, read live from GitHub  │
+ │  Library                         SystemInfo  ← sy-sysid / client / admin / readiness           │
+ │        │ actions call                                                                          │
+ │        ▼                                                                                        │
+ │ ZCL_AB_BOLT_MIG_SVC ── ZCL_AB_BOLT_LEGACY_GRAB (port of ZSF2AF_R_LEGACY_GRAB)                  │
+ │        │            ── ZCL_AB_BOLT_FORM_EXPORT (Smart Form XML + Smart Styles)                 │
+ │        │            ── ZCL_AB_BOLT_STATUS_FILE (byte-for-byte statusParse.js)                  │
+ │        ▼                                                                                        │
+ │ ZCL_AB_BOLT_GITHUB ── ZCL_AB_BOLT_HTTP (URL + STRUST, or optional SM59) ──► api.github.com      │
+ │ Tables: ZABT_BOLT_SETUP / MIG / HIST / FILE / LIB / SECRT / DRVIX (cross-client)               │
+ │ Jobs:   ZABR_BOLT_SYNC (15 min)   ZABR_BOLT_DRIVER_INDEX (daily)                               │
+ └─────────────────────────────────────────────────────────────────────────────────────────────────┘
+        ▲                                                         │ one commit per form
+        │ status file writes (confirm / problem / stop …)         ▼
+        └──────────── client's migration repository on GitHub ◄── engineer windows (unchanged)
 ```
 
-## The flow, step by step
+## The flows
 
-| Step | Web app | Bolt with Fiori |
+| Flow | What happens | RAP |
 |---|---|---|
-| Choose forms | Operator runs ZSF2AF_R_LEGACY_GRAB, downloads files, uploads them in "+ New migration" | **Smart Forms Overview**: pick the source system, tick forms (ones already in migration cannot be ticked), **Next** |
-| Confirm | — | Dialog lists the selection → **Commit selection** → rows in `ZBOLT_MIG` with the next serial number |
-| Send | Server creates branch + uploads files + Queued status file, retries in background | Each form: legacy grab + XML export on the source system → **one commit** with all files and the Queued status file, branch reference created last. Failed → saved as FAILED with the reason, retried by `ZBOLT_R_SYNC` |
-| Follow | Status board reads the status file on open | **Migration** tab: refreshes from GitHub on open, on Refresh, optional 2-minute auto refresh, plus the background job |
-| Answer | Confirm / problem / question / change / concern / stop / resume / attach | Identical, same headings and texts in the status file, plus "Sent from Bolt with Fiori by SAP user X" |
-| Close | Engineer sets `completed` | Same — read from the status file |
+| **Smart Forms tab** | Every custom Smart Form of this system (prefixes from the setup), with package, last change, NACE output types and driver programs, and its migration state: NONE / ACTIVE / STOPPED / COMPLETED | custom entity `SmartForm` |
+| **Next → Commit** | One migration per selected form: next serial number (table lock so two users never get the same), run number, branch `<prefix>-<form>` (re-process: `-r<n>`). ACTIVE and COMPLETED forms are refused; a STOPPED form starts a re-process run and the stopped run is closed (*Superseded*). | static action `commitSelection` |
+| **Automatic transfer** | Right after Commit, form by form: legacy grab `.md` + driver sources, Smart Form XML, every custom Smart Style the form uses, and the Queued status file — **one commit**, the branch reference written last, so a branch never exists half-made. An existing branch with a status file is adopted; one without is never overwritten. A failed send is saved as FAILED with its reason and retried by the job. | instance action `pushToGitHub` |
+| **Live status** | The status file is read live from the branch; its header is stored as basic status (status, waiting on, stop, picked up by, dates) and every change writes one history row. The texts are not stored. | `refreshStatus`, `refreshAll`, custom entities `StatusFile`, `Timeline` |
+| **Communication panel** | *I've done this — confirm* (only while waiting on someone other than the engineer, and not stopped — the only thing that releases a WAITING_ON hand-off), *Report a problem / Ask a question / Request a change*, *Raise a concern* (also after completion), with several attachments pushed to `<branch>/concerns/<ms>/`. Headings, texts and status changes are those of the web app. | action `respond` |
+| **Stop / Resume** | STOP requested / none in the status file, with the reason; resume puts the migration back exactly where it was. Never sent to GitHub: a local stop. | actions `requestStop`, `resume` |
+| **Legacy documents** | Stage files to add and files to remove, then *Save changes*: added files are pushed to `<branch>/`, removed ones only leave the list (the branch is untouched). | action `saveLegacyDocs` |
+| **Configuration** | Client name (saved on leaving the field), administrators, GitHub token connect/disconnect, AI provider + test, target repository check/create/save, global reference library, advanced settings. Administrators only. | `Setup` actions, `Library` upload/delete |
 
-## Gate and status-file rules kept as they are
+## RAP design rules used
 
-- Only **"Manual activity confirmed"** releases a `WAITING_ON` hand-off. The app refuses to confirm
-  when nothing waits on the client or the migration is stopped (same checks as the web server).
-- `CLAIMED_BY` is never written by the app. Only an engineer claims or releases.
-- `STOP: requested` is set and cleared only by the client.
-- Writes use the file's blob SHA. If the engineer wrote in between, GitHub refuses (409), and the app
-  re-reads and re-applies, up to 3 times. No lost updates, no force-push.
+- Managed business objects, `strict ( 2 )`, ETag on every root (`LocalChanged`), managed UUID keys.
+- Migrations are changed **only** by actions (`internal create / update`); the UI cannot write a
+  status directly.
+- Every database write in the interaction phase goes through **EML in local mode**; the GitHub
+  token and the AI key are written only in the **saver** (`managed with additional save`).
+- HTTP calls to GitHub happen inside the actions; their result is stored by the same action.
+- A failed GitHub send is reported as a *warning*, not *failed*, so the FAILED state is saved and
+  not rolled back. A refused client action (e.g. "Nothing is waiting for your confirmation") is
+  *failed* and changes nothing.
+- Global authorization: Setup/Library changes for administrators only; migrations for every app user.
+- Validation on save: the administrator list must contain the user saving it; folders and prefixes
+  are checked.
+- The background job uses the same BO through EML + `COMMIT ENTITIES`.
 
-## Several systems (DEV / QA / PRD)
+## What is stored where
 
-The app runs in one system (normally DEV) and keeps the migrations there. The **source system** of
-the Smart Forms can be any system in `ZBOLT_SYSTEM`:
-
-- **This system** (`IsLocal`): read directly.
-- **Another system**: the same Bolt package is installed there, and the app calls its OData entities
-  `SourceForm` (list) and `SourceFile` (legacy grab + XML export of one form) through an SM59 HTTP
-  destination. The extraction always runs on the system that holds the form, so the files are that
-  system's truth.
-
-A form name is one migration branch, so a form already in migration from DEV cannot be selected
-again from QA.
-
-## Data model
-
-| Table | Purpose |
-|---|---|
-| `ZBOLT_SETUP` | one row: client name, administrators, GitHub (destination/owner/repo/base/prefix + last test), AI (provider/model/destination/path/max tokens + last test), form prefixes, NAST counting |
-| `ZBOLT_SYSTEM` | source systems: ID, client, destination, service path, endpoint, local/default, last test |
-| `ZBOLT_MIG` | one row per migration: serial no., form, system, branch, slug, send state (PENDING/PUSHED/FAILED/WITHDRAWN), mirror of the status-file header, complexity signal |
-| `ZBOLT_MIGLOG` | `STATUS` rows = the status-file timeline (replaced when the file changes); `APP` rows = this app's own events |
-| `ZBOLT_MIGFILE` | every file pushed to the branch (path, kind, size, when, who) |
-| `ZBOLT_SECRET` | the AI API key — not part of any CDS view, never sent to the UI |
-| `ZBOLT_DRVIDX` | driver index of the system it lives on (form → program candidates) |
-
-## Security
-
-- **GitHub token:** only in SM59 `ZBOLT_GITHUB` (Basic logon, fine-grained token limited to the
-  client repository, Contents read/write).
-- **AI key:** in `ZBOLT_SECRET`. It is written only in the RAP save phase, is not exposed by any CDS
-  view, and is not shown again in the UI. Restrict table access (authorization group) as for any
-  credential table.
-- **Administrators** (Configuration → Administrators) can change the setup and source systems and
-  withdraw migrations. A blank list means everyone. Enforced in the RAP behaviour, not only in the
-  UI.
-- Driver programs are only read (`READ REPORT`). Nothing in the source systems is changed.
-
-## What is deliberately not in version 1
-
-| Item | Why | Instead |
+| Data | Where | Why |
 |---|---|---|
-| Global library upload (logos, SmartStyle exports, naming docs → `docs/global_data/` on main) | Needs a separate push-to-main flow | The legacy grab's global sweep runs on the source system (`SourceFile` with FORM_NAME `*GLOBAL*`); a "Publish client specification" button is the planned next step |
-| RAP migration type | The web app had it parked as well | Smart Forms only |
-| AI execution plans / Bolt conversation | Superseded by the status-file process | AI summary of a migration's legacy grab |
-| Live server push (SSE) | No server push in a Launchpad app | Refresh on open, Refresh button, optional 2-minute auto refresh, background job |
-| Admin password | SAP users and roles exist | Administrators list + PFCG roles |
+| Basic status, dates, counts, serial/run numbers | `ZABT_BOLT_MIG` | progress analysis at any time (Migration tab, export) |
+| One row per event (committed, sent, status change, confirm, stop …) — no texts | `ZABT_BOLT_HIST` | history of every migration |
+| Files on each branch (path, kind, size, commit; removed-from-list flag) | `ZABT_BOLT_FILE` | Legacy documents, Files on the branch |
+| Messages, notes, engineer entries | the status file on the branch only | single source both sides read |
+| GitHub token, AI key | `ZABT_BOLT_SECRT` (encoded, never returned by the service) | protect with S_TABU_NAM |
+| Driver programs per form | `ZABT_BOLT_DRVIX` | the slow scan runs once a day, one click stays fast |
+
+All tables are **cross-client**: Smart Forms are cross-client repository objects, so the list of
+migrations is the same whichever client the app is opened in.
+
+## The contract with the engineer side
+
+- Status file path `docs/legacy_grab/<slug>_status.md` (folder configurable, keep the default),
+  header `STATUS / UPDATED / WAITING_ON / NOTE / STOP / CLAIMED_BY`, `---`, entries
+  `## <ISO time> — <heading>`. `ZCL_AB_BOLT_STATUS_FILE` is a byte-for-byte port of
+  `statusParse.js` with unit tests. Change both or neither.
+- The app never writes `CLAIMED_BY`.
+- Writes send the blob SHA; on a conflict the file is read again and the entry re-applied (three
+  attempts).
+- Branch names follow `migrationBranchName()` of the web app; the re-process suffix `-r<n>` keeps
+  the slug, so `tools/queue.mjs` finds the status file on the new branch as on any other.

@@ -1,0 +1,104 @@
+## Bolt - BTP deployment (only when the client runs Fiori on SAP BTP Work Zone).
+## For an on-premise Fiori launchpad use ui5-deploy.yaml instead (npm run deploy).
+##
+## What the BTP subaccount needs BEFORE "npm run deploy:cf" (docs/04_installation.md, part C):
+##   - SAP Build Work Zone (standard edition) subscription
+##   - Cloud Connector connected to the subaccount, exposing the S/4 system's
+##     /sap/opu/odata4/ path (virtual host, e.g. s4-bolt:443)
+##   - Destination BOLT_S4 (subaccount level): Type HTTP, ProxyType OnPremise,
+##     URL http://s4-bolt:443 (the virtual host), Authentication PrincipalPropagation,
+##     sap-client = the client's productive client, HTML5.DynamicDestination = true,
+##     WebIDEEnabled = true, WebIDEUsage = odata_gen
+##   - Principal propagation set up in the Cloud Connector + STRUST (so every
+##     user works in SAP as themselves - the authorizations and the "Committed
+##     by" user stay correct)
+_schema-version: "3.2"
+ID: vernasoft-boltfiori
+version: 2.0.0
+description: Bolt - Smart Form to Adobe migration console (SAPUI5 on the HTML5 repository)
+parameters:
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm install
+modules:
+  - name: vernasoft-boltfiori-destination-content
+    type: com.sap.application.content
+    requires:
+      - name: vernasoft-boltfiori-destination-service
+        parameters:
+          content-target: true
+      - name: vernasoft-boltfiori-repo-host
+        parameters:
+          service-key:
+            name: vernasoft-boltfiori-repo-host-key
+      - name: vernasoft-boltfiori-uaa
+        parameters:
+          service-key:
+            name: vernasoft-boltfiori-uaa-key
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Name: vernasoft-boltfiori_html_repo_host
+              ServiceInstanceName: vernasoft-boltfiori-html5-srv
+              ServiceKeyName: vernasoft-boltfiori-repo-host-key
+              sap.cloud.service: vernasoft-boltfiori
+            - Authentication: OAuth2UserTokenExchange
+              Name: vernasoft-boltfiori_uaa
+              ServiceInstanceName: vernasoft-boltfiori-xsuaa-srv
+              ServiceKeyName: vernasoft-boltfiori-uaa-key
+              sap.cloud.service: vernasoft-boltfiori
+          existing_destinations_policy: update
+    build-parameters:
+      no-source: true
+  - name: vernasoft-boltfiori-app-content
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: vernasoft-boltfiori-repo-host
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: resources
+      requires:
+        - artifacts:
+            - vernasoftboltfiori.zip
+          name: vernasoftboltfiori
+          target-path: resources/
+  - name: vernasoftboltfiori
+    type: html5
+    path: .
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm run build:cf
+      supported-platforms: []
+resources:
+  - name: vernasoft-boltfiori-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        HTML5Runtime_enabled: true
+        version: 1.0.0
+      service: destination
+      service-name: vernasoft-boltfiori-destination-service
+      service-plan: lite
+  - name: vernasoft-boltfiori-uaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        xsappname: vernasoft-boltfiori-${space}
+        tenant-mode: dedicated
+      service: xsuaa
+      service-name: vernasoft-boltfiori-xsuaa-srv
+      service-plan: application
+  - name: vernasoft-boltfiori-repo-host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-name: vernasoft-boltfiori-html5-srv
+      service-plan: app-host

@@ -18,9 +18,9 @@ builder:
           username: env:ABAP_USER
           password: env:ABAP_PASSWORD
         app:
-          name: ZBOLT_FIORI
-          package: ZBOLT_FIORI
+          name: ZSFTAD_BOLT
+          package: ZSFTAD_BOLT
           transport: REPLACE-WITH-TRANSPORT
-          description: "Bolt with Fiori - Smart Form migration console"
+          description: "Bolt - Smart Form to Adobe migration console"
         exclude:
           - /test/

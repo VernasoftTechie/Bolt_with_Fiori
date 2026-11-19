@@ -1,0 +1,17 @@
+projection;
+strict ( 2 );
+
+define behavior for ZAB_CDS_C_BOLT_SETUP alias Setup
+use etag
+{
+  use update;
+
+  use action initialize;
+  use action connectGitHub;
+  use action disconnectGitHub;
+  use action checkRepo;
+  use action createRepo;
+  use action saveRepo;
+  use action saveAi;
+  use action testAi;
+}

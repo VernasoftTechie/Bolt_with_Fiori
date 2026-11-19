@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiori Discussion Points</title>
+<style>
+  :root {
+    --ink: #1d2733; --muted: #5b6876; --line: #c9d1da; --soft: #eef2f6; --paper: #ffffff;
+    --ground: #f5f7fa; --accent: #0a6ed1; --accent-soft: #e5f0fb;
+    --good: #256f3a; --good-soft: #e4f3e8; --warn: #a45a00; --warn-soft: #fdf0dc;
+    --bad: #aa2e25; --bad-soft: #fbe6e4; --idle: #55606c; --idle-soft: #e9edf1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink);
+    font: 15px/1.55 "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 44px 0 10px; padding-top: 18px; border-top: 2px solid var(--line); }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  p { margin: 0 0 10px; max-width: 72ch; }
+  .lede { color: var(--muted); font-size: 16px; }
+  ul { margin: 0 0 10px; padding-left: 20px; max-width: 76ch; }
+  li { margin-bottom: 5px; }
+  .brief { background: var(--paper); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+    padding: 14px 16px; margin: 18px 0; }
+  .brief p:last-child { margin-bottom: 0; }
+  .caption { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  .tag { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+
+  /* ---- wireframe ---- */
+  .screen { background: var(--paper); border: 1.5px solid #8b97a5; border-radius: 6px; overflow: hidden; margin-top: 12px; }
+  .shell { display: flex; align-items: center; gap: 12px; background: #2b3a4a; color: #fff; padding: 9px 14px; font-size: 13px; }
+  .shell b { font-size: 14px; }
+  .shell .sp { flex: 1; }
+  .conn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #5fd07f; display: inline-block; }
+  .body { padding: 16px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .tile { border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; background: var(--paper); }
+  .tile .n { font-size: 28px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .tile .l { font-size: 12px; color: var(--muted); }
+  .tile.hot { border-color: var(--warn); background: var(--warn-soft); }
+  .btn { display: inline-block; border: 1px solid var(--accent); color: var(--accent); background: var(--paper);
+    border-radius: 4px; padding: 5px 12px; font-size: 13px; white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.danger { border-color: var(--bad); color: var(--bad); }
+  .btn.ghost { border-color: var(--line); color: var(--muted); }
+  .field { border: 1px solid var(--line); border-radius: 4px; padding: 5px 10px; font-size: 13px; color: var(--muted);
+    background: var(--paper); min-width: 130px; }
+  .field.wide { flex: 1; min-width: 180px; }
+  .sub { font-size: 13px; font-weight: 600; margin: 16px 0 6px; }
+  .wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 640px; }
+  th { text-align: left; font-weight: 600; color: var(--muted); border-bottom: 1.5px solid var(--line); padding: 6px 8px; white-space: nowrap; }
+  td { border-bottom: 1px solid var(--soft); padding: 7px 8px; vertical-align: top; }
+  .cb { display: inline-block; width: 13px; height: 13px; border: 1.5px solid #8b97a5; border-radius: 2px; vertical-align: -2px; }
+  .cb.on { background: var(--accent); border-color: var(--accent); }
+  .pill { display: inline-block; border-radius: 10px; padding: 1px 9px; font-size: 12px; white-space: nowrap; }
+  .p-idle { background: var(--idle-soft); color: var(--idle); }
+  .p-work { background: var(--accent-soft); color: var(--accent); }
+  .p-wait { background: var(--warn-soft); color: var(--warn); }
+  .p-done { background: var(--good-soft); color: var(--good); }
+  .p-stop { background: var(--bad-soft); color: var(--bad); }
+  .footer { display: flex; gap: 10px; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+    border-top: 1px solid var(--line); background: var(--soft); padding: 9px 14px; font-size: 13px; }
+  .footer .sp { flex: 1; color: var(--muted); }
+  .objhead { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  .kv .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .kv .v { font-size: 14px; }
+  .need { border: 1px solid var(--warn); background: var(--warn-soft); border-radius: 4px; padding: 10px 12px; font-size: 13px; margin-top: 12px; }
+  .need ol { margin: 6px 0 0; padding-left: 20px; }
+  .tl { border-left: 2px solid var(--line); margin: 6px 0 0 6px; padding-left: 14px; }
+  .tl .e { position: relative; margin-bottom: 10px; font-size: 13px; }
+  .tl .e::before { content: ""; position: absolute; left: -20px; top: 6px; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--paper); border: 2px solid var(--accent); }
+  .tl .e.client::before { border-color: var(--good); }
+  .tl .t { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .note { font-size: 12px; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 6px 10px; margin-top: 10px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) {
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    .objhead, .two { grid-template-columns: 1fr 1fr; }
+  }
+  @media print {
+    body { background: #fff; } main { padding: 0; }
+    .screen, .brief, h3 + ul { break-inside: avoid; } h2 { break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<p class="tag">Discussion document for the Fiori developer</p>
+<h1>Smart Form Migration app: Fiori discussion points</h1>
+<p class="lede">Screen sketches and the questions we need answered before the build is scoped.</p>
+
+<div class="brief">
+  <p><strong>Brief.</strong> We are replacing our web application with a Fiori app on a RAP (OData V4) back end, running in the client's SAP system.</p>
+  <p>The back end does all the GitHub integration: it sends the legacy form files to GitHub and reads and writes each migration's status file. The Fiori side only calls our OData service.</p>
+</div>
+
+<h2>Screen sketches</h2>
+<p>These are rough layouts to show what each screen must do. They are not a visual design. Form names and values are example data.</p>
+
+<h3>1. Dashboard</h3>
+<div class="screen">
+  <div class="shell"><b>Smart Form Migration</b><span>Dashboard</span><span class="sp"></span>
+    <span class="conn"><span class="dot"></span>GitHub connected</span></div>
+  <div class="body">
+    <div class="tiles">
+      <div class="tile"><div class="n">3</div><div class="l">Queued</div></div>
+      <div class="tile"><div class="n">2</div><div class="l">In work</div></div>
+      <div class="tile hot"><div class="n">2</div><div class="l">Waiting on you</div></div>
+      <div class="tile"><div class="n">0</div><div class="l">Stopped</div></div>
+      <div class="tile"><div class="n">2</div><div class="l">Completed</div></div>
+    </div>
+    <div class="sub">Needs your action</div>
+    <div class="wrap"><table>
+      <tr><th>Form</th><th>Step waiting on you</th><th>Since</th><th></th></tr>
+      <tr><td>ZMM_PO_DEMO</td><td>Pull the layout, activate, and preview a long and a short purchase order</td><td>06 Oct, 07:00</td><td><span class="btn">Open</span></td></tr>
+      <tr><td>ZFING_CUST_ACT_SUM</td><td>Pull the branch and check the Context imports cleanly</td><td>02 Oct, 05:53</td><td><span class="btn">Open</span></td></tr>
+    </table></div>
+    <div class="row" style="margin-top:14px">
+      <span class="btn primary">Retrieve Smart Forms</span>
+      <span class="btn">All migrations</span>
+      <span class="btn ghost">Refresh</span>
+    </div>
+  </div>
+</div>
+<p class="caption">Each count opens the matching list. The connection indicator links to the connection screen (sketch 4).</p>
+
+<h3>2. Retrieve tab</h3>
+<div class="screen">
+  <div class="shell"><b>Smart Form Migration</b><span>Retrieve Smart Forms</span><span class="sp"></span>
+    <span class="conn"><span class="dot"></span>GitHub connected</span></div>
+  <div class="body">
+    <div class="row">
+      <span class="field wide">Search form name or description</span>
+      <span class="field">Package</span>
+      <span class="field">Driver assigned</span>
+      <span class="field">Migration status</span>
+      <span class="btn">Go</span>
+    </div>
+    <div class="sub">Smart Forms in this system (5 of 214 shown)</div>
+    <div class="wrap"><table>
+      <tr><th></th><th>Form</th><th>Description</th><th>Package</th><th>Driver program</th><th>Last changed</th><th>Migration</th></tr>
+      <tr><td><span class="cb on"></span></td><td>YMM_PO_SMARTFORM</td><td>Purchase order</td><td>ZMM</td><td>YMM_PO_PROGRAM</td><td>12 Mar 2024</td><td><span class="pill p-idle">Not started</span></td></tr>
+      <tr><td><span class="cb on"></span></td><td>ZMMCG_PO_SF</td><td>Purchase order (CG)</td><td>ZMM</td><td>ZCGMMPOP001</td><td>03 Feb 2025</td><td><span class="pill p-idle">Not started</span></td></tr>
+      <tr><td><span class="cb"></span></td><td>ZMMET_PO_SF</td><td>Purchase order (ET)</td><td>ZMM</td><td>ZMMET_PO_DRIVER_RP</td><td>21 Aug 2025</td><td><span class="pill p-work">In work</span></td></tr>
+      <tr><td><span class="cb"></span></td><td>ZMM_PO_DEMO</td><td>Purchase order demo</td><td>ZMM</td><td>Not confirmed</td><td>30 Sep 2026</td><td><span class="pill p-wait">Waiting on you</span></td></tr>
+      <tr><td><span class="cb"></span></td><td>ZCGSD_INVOICE</td><td>Sales invoice</td><td>ZSD</td><td>ZCGSDINV002</td><td>18 Jun 2025</td><td><span class="pill p-done">Completed</span></td></tr>
+    </table></div>
+  </div>
+  <div class="footer"><span class="sp">2 forms selected</span><span class="btn ghost">Preview files to be sent</span><span class="btn primary">Migrate selected</span></div>
+</div>
+<p class="caption">"Migrate selected" starts a background job. For each form it sends the form export, driver programs and style to GitHub, then creates the migration. Forms already in migration cannot be selected again.</p>
+
+<h3>3. Migration page</h3>
+<div class="screen">
+  <div class="shell"><b>Smart Form Migration</b><span>ZMM_PO_DEMO</span><span class="sp"></span>
+    <span class="conn"><span class="dot"></span>GitHub connected</span></div>
+  <div class="body">
+    <div class="objhead">
+      <div class="kv"><div class="k">Status</div><div class="v"><span class="pill p-wait">Waiting on you</span></div></div>
+      <div class="kv"><div class="k">Engineer</div><div class="v">Window-1</div></div>
+      <div class="kv"><div class="k">Last update</div><div class="v">06 Oct, 07:00</div></div>
+      <div class="kv"><div class="k">Branch</div><div class="v">vernasofttechie-zmm_po_demo</div></div>
+    </div>
+    <div class="need"><strong>Action needed from you (SAP)</strong>
+      <ol>
+        <li>Pull this branch onto <b>ZMM_PO_DEMO_ADT</b> and activate it.</li>
+        <li>Preview a purchase order with more than 29 items, and a short one.</li>
+        <li>Confirm, or report what you see.</li>
+      </ol>
+    </div>
+    <div class="sub">Activity</div>
+    <div class="tl">
+      <div class="e"><div class="t">06 Oct, 07:00 · Engineer</div><b>Page continuation built</b>: the layout now continues onto further pages…</div>
+      <div class="e client"><div class="t">06 Oct, 06:50 · Client</div><b>Manual activity confirmed</b>: "PO - build page continuation."</div>
+      <div class="e"><div class="t">06 Oct, 06:46 · Engineer</div><b>Layout built (first version)</b>: A4 portrait, title, header, items table…</div>
+      <div class="e client"><div class="t">06 Oct, 06:41 · Client</div><b>Manual activity confirmed</b></div>
+      <div class="e"><div class="t">06 Oct, 06:36 · Engineer</div><b>Context tree built</b>: 14 nodes…</div>
+    </div>
+    <div class="note">Engineer entries are written in Markdown (bold, numbered lists, code names) and can be long. They need to render formatted, with "show more" for long ones.</div>
+  </div>
+  <div class="footer"><span class="sp">Shown as of 16 Nov, 10:42</span><span class="btn ghost">Refresh</span><span class="btn danger">Stop</span><span class="btn">Report a problem</span><span class="btn primary">I've done this — confirm</span></div>
+</div>
+<p class="caption">"Report a problem" opens a dialog with free text and an optional screenshot. "Confirm" can carry an optional comment. After completion the footer shows "Raise a concern" instead.</p>
+
+<h3>4. Connection screen</h3>
+<div class="screen">
+  <div class="shell"><b>Smart Form Migration</b><span>Connection</span><span class="sp"></span></div>
+  <div class="body">
+    <div class="two">
+      <div class="kv"><div class="k">GitHub repository</div><div class="v">VernasoftTechie/Smartform-Adobe-Migration</div></div>
+      <div class="kv"><div class="k">Status</div><div class="v"><span class="pill p-done">Connected</span> last checked 16 Nov, 10:40</div></div>
+    </div>
+    <div class="row" style="margin-top:14px"><span class="btn primary">Test connection</span></div>
+    <div class="note">Administrator only. The token is kept in the SAP destination, not on this screen. While the connection is down, "Migrate selected" is disabled.</div>
+  </div>
+</div>
+
+<h2>Questions for the Fiori developer</h2>
+
+<h3>1. Platform</h3>
+<ul>
+  <li>Which SAP release and UI5 version is on the target system, and is the Fiori Launchpad set up there?</li>
+  <li>Is the system on-premise or on BTP, and how will the app be deployed (Business Application Studio, transport)?</li>
+  <li>Does that release support OData V4 with Fiori elements, or are we limited to V2?</li>
+</ul>
+
+<h3>2. App type</h3>
+<ul>
+  <li>Do you recommend Fiori elements (List Report and Object Page) or a freestyle UI5 app for these screens?</li>
+  <li>Can one app hold the dashboard, the Retrieve tab and the Migration page, or should they be separate apps or tiles?</li>
+</ul>
+
+<h3>3. Screens</h3>
+<ul>
+  <li><strong>Dashboard:</strong> counts by status, each linking to its list, plus a "needs your action" list. Is an overview page or a custom page the better fit?</li>
+  <li><strong>Retrieve tab:</strong> a list of the client's Smart Forms with search, filters and multi-select, and a "Migrate selected" button. The list may hold hundreds of forms.</li>
+  <li><strong>Migration page:</strong> status, who it is waiting on, the action-needed box, and the full activity timeline.</li>
+  <li><strong>Action buttons:</strong> "I've done this — confirm", "Report a problem" (free text), "Stop", and "Raise a concern" after completion.</li>
+  <li><strong>Connection screen:</strong> a "Test connection" button and a clear connected / not connected indicator.</li>
+</ul>
+
+<h3>4. Specific UI questions</h3>
+<ul>
+  <li><strong>Formatted text:</strong> status entries are Markdown. What is the best way to render them, and is a timeline control suitable?</li>
+  <li><strong>Background actions:</strong> "Migrate" runs as a background job. How should the screen show progress and the result per form?</li>
+  <li><strong>Refresh:</strong> we want refresh on open plus a manual Refresh button, with no constant polling. Is that straightforward?</li>
+  <li><strong>Attachments:</strong> can the user attach a screenshot when reporting a problem, and upload extra reference files when needed?</li>
+  <li><strong>Notifications:</strong> can the Launchpad notify the user when a migration is waiting on them?</li>
+  <li><strong>Launchpad tile:</strong> can the tile show a live count, such as "2 waiting on you"?</li>
+</ul>
+
+<h3>5. What you need from the back end</h3>
+<ul>
+  <li><strong>Entities:</strong> Smart Form, Migration, Status Entry and Connection. Do you need anything else?</li>
+  <li><strong>Actions:</strong> Migrate, Confirm, Report Problem, Stop, Raise Concern, Test Connection and Refresh.</li>
+  <li><strong>Annotations and side effects:</strong> who writes the UI annotations (the ABAP developer in CDS, or you), and what do you need so the screen updates after an action?</li>
+</ul>
+
+<h3>6. Access and delivery</h3>
+<ul>
+  <li><strong>Roles:</strong> we need at least two, a client operator and an administrator. How should buttons be hidden or disabled per role?</li>
+  <li><strong>Languages and devices:</strong> is English and desktop-only acceptable, or is mobile or another language needed?</li>
+  <li><strong>Effort and order:</strong> what is your estimate for these screens? Can the Retrieve tab plus Migrate be built first, as a thin working slice?</li>
+  <li><strong>Mock data:</strong> what do you need from us to start before the back end is ready (a mock service, sample data)?</li>
+</ul>
+
+</main>
+</body>
+</html>

@@ -7,172 +7,264 @@
   height="100%"
   displayBlock="true">
 
-  <!-- One migration: the same status board as Bolt Console's Workspace -
-       status, waiting-on, the client's response buttons, stop/resume, the
-       full status-file timeline from the branch, plus this app's own log. -->
-  <Page id="detailPage" title="{d>/FormName}" showNavButton="true" navButtonPress=".onNavBack"
-        busy="{d>/busy}" busyIndicatorDelay="0" class="boltPage">
+  <!-- One migration: the same page as the web app's Workspace (header,
+       complexity, status board with the communication panel, legacy documents)
+       plus the SAP-side status history and the files on the branch. -->
+  <Page id="detailPage" title="{det>/mig/FormName}" showNavButton="true" navButtonPress=".onNavBack"
+        busy="{det>/busy}" busyIndicatorDelay="0" class="boltPage">
     <headerContent>
-      <Button text="{i18n>retrySend}" icon="sap-icon://upload-to-cloud" press=".onRetrySend"
-              visible="{= ${d>/PushStatus} === 'FAILED' || ${d>/PushStatus} === 'PENDING' }"/>
-      <Button text="{i18n>aiSummary}" icon="sap-icon://da-2" press=".onAiSummary"
-              visible="{= ${d>/PushStatus} === 'PUSHED' &amp;&amp; ${app>/setup/AiProvider} !== 'NONE' }"/>
-      <Button icon="sap-icon://refresh" tooltip="{i18n>refresh}" press=".onRefresh"/>
-      <Button text="{i18n>withdraw}" icon="sap-icon://undo" type="Reject" press=".onWithdraw"
-              visible="{= ${app>/isAdmin} &amp;&amp; ${d>/Withdrawn} !== 'X' }"/>
+      <Button icon="sap-icon://refresh" text="{i18n>refresh}" press=".onRefresh"/>
     </headerContent>
-
     <content>
-      <ObjectHeader title="{d>/FormName}" number="{= 'No. ' + ${d>/SerialNo} }" responsive="true"
-                    titleLevel="H2" class="boltObjectHeader" backgroundDesign="Transparent">
-        <statuses>
-          <ObjectStatus text="{d>/statusText}" state="{d>/statusState}" inverted="true"/>
-          <ObjectStatus text="{= ${d>/Complexity} ? 'Complexity: ' + ${d>/Complexity} : '' }"
-                        state="{path: 'd>/Complexity', formatter: '.formatter.complexityState'}"
-                        tooltip="{d>/ComplexityText}"/>
-        </statuses>
-        <attributes>
-          <ObjectAttribute title="{i18n>colDescription}" text="{d>/FormDescription}"/>
-          <ObjectAttribute title="{i18n>colSystem}" text="{d>/systemText}"/>
-          <ObjectAttribute title="{i18n>branch}" text="{d>/BranchName}" active="{= !!${d>/branchUrl} }" press=".onOpenBranch"/>
-          <ObjectAttribute title="{i18n>pickedUpBy}" text="{d>/ClaimedBy}" visible="{= !!${d>/ClaimedBy} }"/>
-          <ObjectAttribute title="{i18n>selectedBy}" text="{d>/CreatedBy} - {path: 'd>/CreatedAt', formatter: '.formatter.dateTime'}"/>
-          <ObjectAttribute title="{i18n>lastRead}" text="{path: 'd>/LastSyncAt', formatter: '.formatter.dateTime'}"/>
-        </attributes>
-      </ObjectHeader>
+      <VBox class="sapUiSmallMargin">
 
-      <MessageStrip visible="{= ${d>/PushStatus} === 'FAILED' }" type="Error" showIcon="true" text="{d>/PushMessage}"
-                    class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom"/>
-      <MessageStrip visible="{= ${d>/PushStatus} === 'PENDING' }" type="Information" showIcon="true" text="{i18n>pendingText}"
-                    class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom"/>
-      <Text text="{i18n>statusBoardHint}" class="boltHint sapUiSmallMarginBeginEnd"/>
-
-      <!-- Stopped -->
-      <VBox visible="{= ${d>/StopFlag} === 'X' }" class="boltStopBanner sapUiSmallMargin">
-        <Title text="{i18n>stopped}" level="H3"/>
-        <Text text="{i18n>stoppedText}"/>
-        <Button text="{i18n>resume}" type="Emphasized" press=".onResume" class="sapUiTinyMarginTop"/>
-      </VBox>
-
-      <!-- Waiting on the client: confirm / problem / question / change -->
-      <Panel visible="{d>/needsClient}" class="boltPanel boltNextStep sapUiSmallMargin">
-        <headerToolbar>
-          <Toolbar>
-            <core:Icon src="sap-icon://user-edit"/>
-            <Title text="{= ${i18n>waitingOnYou} }"/>
-          </Toolbar>
-        </headerToolbar>
-        <FormattedText htmlText="{path: 'd>/StatusNote', formatter: '.formatter.markdown'}" class="boltNote"/>
-        <TextArea value="{d>/input/text}" rows="3" width="100%" growing="true"
-                  placeholder="{i18n>notePlaceholder}" class="sapUiTinyMarginTop"/>
-        <HBox alignItems="Center">
-          <u:FileUploader id="confirmFile" buttonText="{i18n>attachFile}" change=".onFileChosen" sameFilenameAllowed="true"
-                          placeholder="{i18n>attachOptional}" width="22rem">
-            <u:customData><core:CustomData key="slot" value="input"/></u:customData>
-          </u:FileUploader>
+        <!-- ===== header (Workspace.jsx: name, form, branch) ===== -->
+        <HBox wrap="Wrap" justifyContent="SpaceBetween" alignItems="Start" class="boltDetailHeader">
+          <VBox>
+            <Title text="{det>/mig/FormName} · {i18n>serialNo} {det>/mig/SerialNo}" level="H2" wrapping="true"/>
+            <Text text="{det>/mig/FormDescr}" class="boltMuted"/>
+            <HBox alignItems="Center" wrap="Wrap" class="sapUiTinyMarginTop">
+              <Label text="{i18n>colBranch}:" class="sapUiTinyMarginEnd"/>
+              <Link text="{det>/mig/BranchName}" href="{det>/status/BranchUrl}" target="_blank" enabled="{= !!${det>/status/BranchUrl} }"/>
+            </HBox>
+          </VBox>
+          <VBox alignItems="End">
+            <ObjectStatus text="{det>/rowStatus}" state="{det>/rowState}" inverted="true" class="boltBigStatus"/>
+            <Text text="{i18n>runInfo} {det>/mig/RunNo}" visible="{= ${det>/mig/RunNo} > 1 }" class="boltMuted"/>
+          </VBox>
         </HBox>
-        <HBox wrap="Wrap" class="boltButtons">
-          <Button text="{i18n>confirmDone}" type="Emphasized" icon="sap-icon://accept" press=".onConfirm"/>
-          <Button text="{i18n>reportProblem}" press=".onConcern" enabled="{= !!${d>/input/text} || !!${d>/input/fileName} }">
-            <customData><core:CustomData key="kind" value="problem"/></customData>
-          </Button>
-          <Button text="{i18n>askQuestion}" press=".onConcern" enabled="{= !!${d>/input/text} || !!${d>/input/fileName} }">
-            <customData><core:CustomData key="kind" value="question"/></customData>
-          </Button>
-          <Button text="{i18n>requestChange}" press=".onConcern" enabled="{= !!${d>/input/text} || !!${d>/input/fileName} }">
-            <customData><core:CustomData key="kind" value="change"/></customData>
-          </Button>
-        </HBox>
-        <Text text="{i18n>engineerContinues}" class="boltHint"/>
-      </Panel>
 
-      <!-- Not waiting on the client: raise a concern (always open, also after completion) -->
-      <Panel visible="{= !${d>/needsClient} &amp;&amp; ${d>/PushStatus} === 'PUSHED' }" headerText="{i18n>raiseConcern}"
-             class="boltPanel sapUiSmallMargin">
-        <Text text="{= ${d>/Status} === 'completed' ? ${i18n>completedConcernHint} : ${i18n>concernHint} }" class="boltHint"/>
-        <TextArea value="{d>/input/text}" rows="3" width="100%" growing="true" placeholder="{i18n>concernPlaceholder}"/>
-        <HBox alignItems="Center" wrap="Wrap" class="boltButtons">
-          <u:FileUploader buttonText="{i18n>attachFile}" change=".onFileChosen" sameFilenameAllowed="true"
-                          placeholder="{i18n>attachOptional}" width="22rem">
-            <u:customData><core:CustomData key="slot" value="input"/></u:customData>
-          </u:FileUploader>
-          <Button text="{i18n>send}" type="Emphasized" press=".onConcern" enabled="{= !!${d>/input/text} || !!${d>/input/fileName} }">
-            <customData><core:CustomData key="kind" value="concern"/></customData>
-          </Button>
+        <HBox wrap="Wrap" class="boltFacts">
+          <VBox class="boltFact"><Label text="{i18n>colPackage}"/><Text text="{det>/mig/DevPackage}"/></VBox>
+          <VBox class="boltFact"><Label text="{i18n>colDriver}"/><Text text="{det>/mig/DriverProgs}"/></VBox>
+          <VBox class="boltFact"><Label text="{i18n>colOutputTypes}"/><Text text="{det>/mig/OutputTypes}"/></VBox>
+          <VBox class="boltFact"><Label text="{i18n>colCommitted}"/><Text text="{= ${path: 'det>/mig/CreatedAt', formatter: '.formatter.dateTime'} + ' · ' + ${det>/mig/CreatedBy} }"/></VBox>
+          <VBox class="boltFact"><Label text="{i18n>colSent}"/><Text text="{path: 'det>/mig/PushedAt', formatter: '.formatter.dateTime'}"/></VBox>
+          <VBox class="boltFact"><Label text="{i18n>colPickedUpAt}"/><Text text="{path: 'det>/mig/PickedUpAt', formatter: '.formatter.dateTime'}"/></VBox>
+          <VBox class="boltFact"><Label text="{i18n>colCompletedAt}"/><Text text="{path: 'det>/mig/CompletedAt', formatter: '.formatter.dateTime'}"/></VBox>
+          <VBox class="boltFact"><Label text="{i18n>colFiles}"/><Text text="{det>/mig/FilesCount}"/></VBox>
         </HBox>
-      </Panel>
 
-      <!-- Stop + extra reference files -->
-      <HBox wrap="Wrap" class="sapUiSmallMarginBeginEnd" visible="{= ${d>/PushStatus} === 'PUSHED' &amp;&amp; ${d>/Withdrawn} !== 'X' }">
-        <Panel headerText="{i18n>addReferenceFile}" class="boltPanel boltHalf">
-          <Text text="{i18n>addReferenceHint}" class="boltHint"/>
-          <HBox alignItems="Center" wrap="Wrap">
-            <u:FileUploader buttonText="{i18n>chooseFile}" change=".onFileChosen" sameFilenameAllowed="true" width="20rem">
-              <u:customData><core:CustomData key="slot" value="reference"/></u:customData>
-            </u:FileUploader>
-            <Button text="{i18n>upload}" press=".onUploadReference" enabled="{= !!${d>/reference/fileName} }"/>
+        <MessageStrip visible="{det>/superseded}" type="Information" showIcon="true" text="{i18n>supersededStrip}" class="sapUiSmallMarginTop"/>
+
+        <!-- ===== not on GitHub yet / send failed ===== -->
+        <MessageStrip visible="{= ${det>/mig/PushStatus} !== 'PUSHED' &amp;&amp; !${det>/superseded} }"
+                      type="{= ${det>/mig/PushStatus} === 'FAILED' ? 'Error' : 'Information' }" showIcon="true"
+                      text="{= ${det>/mig/PushStatus} === 'FAILED' ? ${i18n>sendFailedStrip} + ' ' + ${det>/mig/PushMsg} : ${i18n>notSentStrip} }"
+                      class="sapUiSmallMarginTop">
+          <link>
+            <Link text="{i18n>sendAgain}" press=".onSendAgain" visible="{= !${det>/stopped} }"/>
+          </link>
+        </MessageStrip>
+
+        <!-- ===== complexity (ComplexityPanel.jsx) ===== -->
+        <Panel class="boltPanel sapUiSmallMarginTop" visible="{= !!${det>/mig/Complexity} }">
+          <HBox alignItems="Center">
+            <ObjectStatus title="{i18n>colComplexity}" text="{path: 'det>/mig/Complexity', formatter: '.formatter.complexityText'}"
+                          state="{path: 'det>/mig/Complexity', formatter: '.formatter.complexityState'}" class="sapUiSmallMarginEnd"/>
+            <Text text="{det>/mig/ComplexityInfo}"/>
+          </HBox>
+          <Text text="{i18n>complexityHint}" class="boltHint"/>
+        </Panel>
+
+        <!-- ===== Migration status - the communication panel (StatusBoard.jsx) ===== -->
+        <Panel class="boltPanel sapUiSmallMarginTop" visible="{= ${det>/mig/PushStatus} === 'PUSHED' }">
+          <headerToolbar>
+            <Toolbar>
+              <Title text="{i18n>migrationStatus}"/>
+              <ObjectStatus text="{det>/status/StatusLabel}" state="{path: 'det>/status/MigStatus', formatter: '.formatter.statusBadgeState'}"
+                            inverted="true"/>
+              <Text text="{i18n>pickedUpBy} {det>/status/ClaimedBy}" visible="{= !!${det>/status/ClaimedBy} }" class="boltMuted"/>
+              <ToolbarSpacer/>
+              <Text text="{path: 'det>/status/UpdatedAt', formatter: '.formatter.dateTime'}" class="boltMuted"/>
+            </Toolbar>
+          </headerToolbar>
+          <Text text="{i18n>statusHint}" class="boltHint"/>
+          <MessageStrip visible="{= !!${det>/notice} }" text="{det>/notice}" type="Success" showIcon="true" class="sapUiTinyMarginTop"/>
+          <MessageStrip visible="{= !!${det>/error} }" text="{det>/error}" type="Error" showIcon="true" class="sapUiTinyMarginTop"/>
+          <MessageStrip visible="{= !${det>/status/Found} &amp;&amp; !!${det>/status/Message} }" text="{det>/status/Message}"
+                        type="Warning" showIcon="true" class="sapUiTinyMarginTop"/>
+
+          <!-- Stopped banner, or the stop form -->
+          <VBox visible="{det>/stopped}" class="boltStopBanner sapUiSmallMarginTop">
+            <Title text="{i18n>stopped}" level="H4"/>
+            <Text text="{i18n>stoppedText}"/>
+            <HBox wrap="Wrap" class="boltButtons" visible="{= !${det>/disabled} &amp;&amp; !${det>/superseded} }">
+              <Button text="{= ${det>/stopBusy} ? ${i18n>resuming} : ${i18n>resume} }" type="Emphasized" press=".onResume"
+                      enabled="{= !${det>/stopBusy} }"/>
+              <Button text="{i18n>reprocessHere}" press=".onReprocess" icon="sap-icon://refresh"/>
+            </HBox>
+          </VBox>
+          <HBox visible="{= !${det>/stopped} &amp;&amp; !${det>/disabled} &amp;&amp; !${det>/superseded} }" alignItems="Center" wrap="Wrap"
+                class="sapUiSmallMarginTop boltButtons">
+            <Input value="{det>/stopNote}" placeholder="{i18n>stopReasonPlaceholder}" width="24rem"/>
+            <Button text="{= ${det>/stopBusy} ? ${i18n>stopping} : ${i18n>stopMigration} }" type="Reject" press=".onStop"
+                    enabled="{= !${det>/stopBusy} }"/>
+          </HBox>
+
+          <!-- Waiting on: X + note + the response buttons -->
+          <VBox visible="{= !!${det>/status/WaitingOn} }" class="boltNextStep sapUiSmallMarginTop">
+            <Title text="{i18n>waitingOn} {det>/status/WaitingOn}" level="H4"/>
+            <FormattedText htmlText="{path: 'det>/status/Note', formatter: '.formatter.markdown'}" visible="{= !!${det>/status/Note} }"
+                           class="boltNote"/>
+            <VBox visible="{det>/needsConfirm}">
+              <TextArea value="{det>/text}" rows="3" width="100%" growing="true" growingMaxLines="12"
+                        placeholder="{i18n>confirmPlaceholder}" valueLiveUpdate="true"/>
+              <core:Fragment fragmentName="vernasoft.boltfiori.fragment.MessageFiles" type="XML"/>
+              <HBox wrap="Wrap" class="boltButtons">
+                <Button text="{= ${det>/confirmBusy} ? ${i18n>confirming} : ${i18n>confirmDone} }" type="Emphasized"
+                        press=".onConfirm" enabled="{= !${det>/confirmBusy} &amp;&amp; !${det>/busySend} }"/>
+                <Button text="{i18n>reportProblem}" press=".onSendKind" enabled="{= !${det>/busySend} &amp;&amp; ${det>/hasMessage} }">
+                  <customData><core:CustomData key="kind" value="problem"/></customData>
+                </Button>
+                <Button text="{i18n>askQuestion}" press=".onSendKind" enabled="{= !${det>/busySend} &amp;&amp; ${det>/hasMessage} }">
+                  <customData><core:CustomData key="kind" value="question"/></customData>
+                </Button>
+                <Button text="{i18n>requestChange}" press=".onSendKind" enabled="{= !${det>/busySend} &amp;&amp; ${det>/hasMessage} }">
+                  <customData><core:CustomData key="kind" value="change"/></customData>
+                </Button>
+              </HBox>
+              <Text text="{i18n>engineerContinues}" class="boltHint"/>
+            </VBox>
+          </VBox>
+
+          <!-- Timeline, newest first -->
+          <List items="{path: 'det>/timeline', templateShareable: false}" class="boltTimeline sapUiSmallMarginTop" showSeparators="Inner">
+            <noData>
+              <IllustratedMessage illustrationType="sapIllus-NoActivities" illustrationSize="Spot" title="{i18n>notPickedUp}"/>
+            </noData>
+            <CustomListItem>
+              <VBox class="boltEntry">
+                <HBox justifyContent="SpaceBetween" wrap="Wrap">
+                  <Text text="{det>Heading}" class="boltStrong"/>
+                  <Text text="{det>EntryAt}" class="boltMuted"/>
+                </HBox>
+                <FormattedText htmlText="{path: 'det>EntryText', formatter: '.formatter.markdown'}" class="boltEntryText"/>
+              </VBox>
+            </CustomListItem>
+          </List>
+
+          <!-- Raise a concern - kept open after completion for follow-up help -->
+          <VBox visible="{= !${det>/needsConfirm} &amp;&amp; !${det>/superseded} }" class="sapUiSmallMarginTop">
+            <Title text="{i18n>raiseConcern}" level="H4"/>
+            <Text visible="{det>/disabled}" text="{i18n>completedConcernHint}" class="boltHint"/>
+            <TextArea value="{det>/text}" rows="3" width="100%" growing="true" growingMaxLines="12"
+                      placeholder="{i18n>concernPlaceholder}" valueLiveUpdate="true"/>
+            <core:Fragment fragmentName="vernasoft.boltfiori.fragment.MessageFiles" type="XML"/>
+            <Button text="{= ${det>/busySend} ? ${i18n>sendingDots} : ${i18n>send} }" type="Emphasized" press=".onSendConcern"
+                    enabled="{= !${det>/busySend} &amp;&amp; ${det>/hasMessage} }"/>
+          </VBox>
+        </Panel>
+
+        <!-- ===== Legacy documents (Workspace.jsx) ===== -->
+        <Panel class="boltPanel sapUiSmallMarginTop">
+          <headerToolbar>
+            <Toolbar>
+              <Title text="{i18n>legacyDocs}"/>
+              <ToolbarSpacer/>
+              <Text text="{path: 'det>/docs/list/length', formatter: '.formatter.files'}" class="boltMuted"/>
+            </Toolbar>
+          </headerToolbar>
+          <Text text="{i18n>legacyDocsHint}" class="boltHint"/>
+          <List items="{path: 'det>/docs/list', templateShareable: false}" class="sapUiTinyMarginTop" showNoData="false">
+            <CustomListItem>
+              <HBox alignItems="Center" justifyContent="SpaceBetween" class="boltDocRow">
+                <HBox alignItems="Center">
+                  <core:Icon src="sap-icon://document" class="sapUiTinyMarginEnd"/>
+                  <VBox>
+                    <Text text="{det>FileName}"/>
+                    <Text text="{= ${path: 'det>FileKind', formatter: '.formatter.kindText'} + ' · ' + ${path: 'det>SizeBytes', formatter: '.formatter.bytes'} }" class="boltMuted"/>
+                  </VBox>
+                </HBox>
+                <HBox alignItems="Center">
+                  <ObjectStatus text="{i18n>willBeRemoved}" state="Warning" visible="{det>pendingRemove}" class="sapUiTinyMarginEnd"/>
+                  <Button text="{i18n>undo}" type="Transparent" press=".onUndoRemove" visible="{det>pendingRemove}"/>
+                  <Button icon="sap-icon://delete" type="Transparent" tooltip="{i18n>removeFromList}" press=".onStageRemove"
+                          visible="{= !${det>pendingRemove} }"/>
+                </HBox>
+              </HBox>
+            </CustomListItem>
+          </List>
+          <List items="{path: 'det>/docs/add', templateShareable: false}" showNoData="false" mode="Delete" delete=".onUnstageDoc">
+            <StandardListItem title="{det>name}" description="{i18n>willBeAdded}" info="{path: 'det>size', formatter: '.formatter.bytes'}"
+                              icon="sap-icon://add-document" infoState="Information"/>
+          </List>
+          <VBox class="boltDrop sapUiTinyMarginTop" visible="{= ${det>/mig/PushStatus} === 'PUSHED' &amp;&amp; !${det>/superseded} }">
+            <customData><core:CustomData key="bolt-drop" value="det|/docs/add" writeToDom="true"/></customData>
+            <HBox alignItems="Center" wrap="Wrap">
+              <core:Icon src="sap-icon://upload" class="boltDropIcon"/>
+              <Text text="{i18n>dropHere}" class="boltDropText"/>
+              <u:FileUploader buttonOnly="true" buttonText="{i18n>chooseFiles}" multiple="true" sameFilenameAllowed="true"
+                              icon="sap-icon://attachment" change=".onDocsChosen"/>
+            </HBox>
+          </VBox>
+          <HBox alignItems="Center" class="sapUiSmallMarginTop">
+            <Button text="{i18n>saveChanges}" type="Emphasized" press=".onSaveDocs"
+                    enabled="{= ${det>/docs/dirty} &amp;&amp; !${det>/docsBusy} }"/>
+            <Text text="{i18n>removeHint}" class="boltInlineMsg"/>
           </HBox>
         </Panel>
-        <Panel headerText="{i18n>stopTitle}" class="boltPanel boltHalf" visible="{= ${d>/StopFlag} !== 'X' }">
-          <Input value="{d>/stopNote}" placeholder="{i18n>stopReason}"/>
-          <Button text="{i18n>stopMigration}" type="Reject" press=".onStop" class="sapUiTinyMarginTop"/>
-        </Panel>
-      </HBox>
 
-      <IconTabBar class="sapUiResponsiveContentPadding" expandable="false">
-        <items>
-          <IconTabFilter text="{i18n>activity}" count="{= ${d>/timeline}.length }" icon="sap-icon://history">
-            <List items="{path: 'd>/timeline', templateShareable: false}" noDataText="{i18n>notPickedUp}" class="boltTimeline">
-              <CustomListItem>
-                <VBox class="boltEntry">
-                  <HBox justifyContent="SpaceBetween" alignItems="Center">
-                    <HBox alignItems="Center">
-                      <core:Icon src="{= ${d>Actor} === 'client' ? 'sap-icon://customer' : (${d>Actor} === 'app' ? 'sap-icon://cloud' : 'sap-icon://developer-settings') }"
-                                 class="boltEntryIcon"/>
-                      <Title text="{d>Heading}" level="H4"/>
-                    </HBox>
-                    <Text text="{path: 'd>EntryAt', formatter: '.formatter.dateTime'}" class="boltMuted"/>
+        <!-- ===== Status history (ZABT_BOLT_HIST - basic status, no texts) ===== -->
+        <Panel headerText="{i18n>historyTitle}" expandable="true" expanded="true" class="boltPanel sapUiSmallMarginTop">
+          <Table items="{path: 'det>/hist', templateShareable: false}" class="boltTable">
+            <columns>
+              <Column width="11rem"><Text text="{i18n>colWhen}"/></Column>
+              <Column><Text text="{i18n>colEvent}"/></Column>
+              <Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colBy}"/></Column>
+              <Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colStatus}"/></Column>
+              <Column width="7rem" minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>colWaitingOn}"/></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <Text text="{path: 'det>EventAt', formatter: '.formatter.dateTime'}"/>
+                  <HBox alignItems="Center">
+                    <core:Icon src="{path: 'det>HistEvent', formatter: '.formatter.eventIcon'}" class="sapUiTinyMarginEnd"/>
+                    <Text text="{path: 'det>HistEvent', formatter: '.formatter.eventText'}"/>
                   </HBox>
-                  <FormattedText htmlText="{path: 'd>LogText', formatter: '.formatter.markdown'}" class="boltEntryText"/>
-                </VBox>
-              </CustomListItem>
-            </List>
-          </IconTabFilter>
-          <IconTabFilter text="{i18n>appLog}" count="{= ${d>/appLog}.length }" icon="sap-icon://list">
-            <List items="{path: 'd>/appLog', templateShareable: false}" noDataText="{i18n>noAppLog}">
-              <CustomListItem>
-                <VBox class="boltEntry">
-                  <HBox justifyContent="SpaceBetween">
-                    <Title text="{d>Heading}" level="H5"/>
-                    <Text text="{path: 'd>EntryAt', formatter: '.formatter.dateTime'}" class="boltMuted"/>
-                  </HBox>
-                  <FormattedText htmlText="{path: 'd>LogText', formatter: '.formatter.markdown'}" class="boltEntryText"/>
-                </VBox>
-              </CustomListItem>
-            </List>
-          </IconTabFilter>
-          <IconTabFilter text="{i18n>files}" count="{= ${d>/files}.length }" icon="sap-icon://attachment">
-            <Table items="{path: 'd>/files', templateShareable: false}" noDataText="{i18n>noFiles}">
-              <columns>
-                <Column><Text text="{i18n>colFile}"/></Column>
-                <Column width="7rem"><Text text="{i18n>colKind}"/></Column>
-                <Column width="7rem"><Text text="{i18n>colSize}"/></Column>
-                <Column width="11rem"><Text text="{i18n>colPushed}"/></Column>
-              </columns>
-              <items>
-                <ColumnListItem>
-                  <cells>
-                    <Link text="{d>FilePath}" href="{d>url}" target="_blank"/>
-                    <Text text="{d>Kind}"/>
-                    <Text text="{path: 'd>SizeBytes', formatter: '.formatter.bytes'}"/>
-                    <Text text="{path: 'd>PushedAt', formatter: '.formatter.dateTime'}"/>
-                  </cells>
-                </ColumnListItem>
-              </items>
-            </Table>
-          </IconTabFilter>
-        </items>
-      </IconTabBar>
+                  <Text text="{= ${path: 'det>Actor', formatter: '.formatter.actorText'} + (${det>EventUser} ? ' · ' + ${det>EventUser} : '') }"/>
+                  <Text text="{= ${path: 'det>MigStatus', formatter: '.formatter.statusLabel'} + (${det>Stopped} ? ' · stopped' : '') }"/>
+                  <Text text="{path: 'det>WaitingOn', formatter: '.formatter.waitingText'}"/>
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </Panel>
+
+        <!-- ===== Files on the branch ===== -->
+        <Panel headerText="{i18n>filesTitle}" expandable="true" expanded="false" class="boltPanel sapUiSmallMarginTop">
+          <Table items="{path: 'det>/files', templateShareable: false}" class="boltTable">
+            <columns>
+              <Column width="10rem"><Text text="{i18n>colKind}"/></Column>
+              <Column><Text text="{i18n>colPath}"/></Column>
+              <Column width="6rem"><Text text="{i18n>colSize}"/></Column>
+              <Column width="11rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colSent}"/></Column>
+              <Column width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>colInList}"/></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <Text text="{path: 'det>FileKind', formatter: '.formatter.kindText'}"/>
+                  <Text text="{det>FilePath}" wrapping="true"/>
+                  <Text text="{path: 'det>SizeBytes', formatter: '.formatter.bytes'}"/>
+                  <Text text="{path: 'det>PushedAt', formatter: '.formatter.dateTime'}"/>
+                  <ObjectStatus text="{= ${det>Removed} ? ${i18n>removedFromList} : ${i18n>yes} }" state="{= ${det>Removed} ? 'Warning' : 'None' }"/>
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </Panel>
+
+        <!-- ===== AI summary of the legacy grab ===== -->
+        <Panel headerText="{i18n>aiSummary}" expandable="true" expanded="false" class="boltPanel sapUiSmallMarginTop"
+               visible="{= ${det>/mig/PushStatus} === 'PUSHED' }">
+          <Text text="{i18n>aiSummaryHint}" class="boltHint"/>
+          <Button text="{i18n>aiSummaryRun}" icon="sap-icon://da" press=".onAiSummary" enabled="{= !${det>/aiBusy} }" class="sapUiTinyMarginTop"/>
+          <BusyIndicator visible="{det>/aiBusy}" size="1.5rem"/>
+          <FormattedText htmlText="{path: 'det>/aiText', formatter: '.formatter.markdown'}" visible="{= !!${det>/aiText} }" class="boltEntryText"/>
+        </Panel>
+      </VBox>
     </content>
   </Page>
 </mvc:View>

@@ -5,17 +5,23 @@
     "type": "application",
     "i18n": {
       "bundleUrl": "i18n/i18n.properties",
-      "supportedLocales": [""],
+      "supportedLocales": [
+        ""
+      ],
       "fallbackLocale": ""
     },
     "title": "{{appTitle}}",
     "description": "{{appDescription}}",
-    "applicationVersion": { "version": "1.0.0" },
+    "applicationVersion": {
+      "version": "2.0.0"
+    },
     "dataSources": {
       "mainService": {
-        "uri": "/sap/opu/odata4/sap/zbolt_ui_o4/srvd/sap/zbolt_ui/0001/",
+        "uri": "/sap/opu/odata4/sap/zab_ui_bolt_o4/srvd/sap/zab_ui_bolt/0001/",
         "type": "OData",
-        "settings": { "odataVersion": "4.0" }
+        "settings": {
+          "odataVersion": "4.0"
+        }
       }
     },
     "crossNavigation": {
@@ -26,15 +32,24 @@
           "title": "{{appTitle}}",
           "subTitle": "{{appSubTitle}}",
           "icon": "sap-icon://journey-change",
-          "signature": { "parameters": {}, "additionalParameters": "allowed" }
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
         }
       }
     }
   },
   "sap.ui": {
     "technology": "UI5",
-    "icons": { "icon": "sap-icon://journey-change" },
-    "deviceTypes": { "desktop": true, "tablet": true, "phone": false }
+    "icons": {
+      "icon": "sap-icon://journey-change"
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": false
+    }
   },
   "sap.ui5": {
     "flexEnabled": false,
@@ -49,16 +64,24 @@
       "libs": {
         "sap.ui.core": {},
         "sap.m": {},
-        "sap.ui.unified": {}
+        "sap.ui.unified": {},
+        "sap.ui.export": {
+          "lazy": true
+        }
       }
     },
-    "contentDensities": { "compact": true, "cozy": true },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
     "models": {
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
           "bundleName": "vernasoft.boltfiori.i18n.i18n",
-          "supportedLocales": [""],
+          "supportedLocales": [
+            ""
+          ],
           "fallbackLocale": ""
         }
       },
@@ -73,7 +96,11 @@
       }
     },
     "resources": {
-      "css": [{ "uri": "css/style.css" }]
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
     },
     "routing": {
       "config": {
@@ -85,13 +112,33 @@
         "async": true
       },
       "routes": [
-        { "name": "dashboard", "pattern": ":tab:", "target": "dashboard" },
-        { "name": "detail", "pattern": "migration/{migUuid}", "target": "detail" }
+        {
+          "name": "dashboard",
+          "pattern": ":tab:",
+          "target": "dashboard"
+        },
+        {
+          "name": "detail",
+          "pattern": "migration/{migUuid}",
+          "target": "detail"
+        }
       ],
       "targets": {
-        "dashboard": { "viewName": "Dashboard", "viewId": "dashboard", "viewLevel": 1 },
-        "detail": { "viewName": "Detail", "viewId": "detail", "viewLevel": 2 }
+        "dashboard": {
+          "viewName": "Dashboard",
+          "viewId": "dashboard",
+          "viewLevel": 1
+        },
+        "detail": {
+          "viewName": "Detail",
+          "viewId": "detail",
+          "viewLevel": 2
+        }
       }
     }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "vernasoft-boltfiori"
   }
 }

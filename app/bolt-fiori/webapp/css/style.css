@@ -63,3 +63,31 @@
 }
 
 .boltHelp { display: block; max-width: 52rem; padding: 0.5rem 1rem 2rem; line-height: 1.5; }
+
+/* ---- v2: configuration cards, drop zones, migration page facts ---- */
+.boltSection { margin: 1.25rem 0 0.5rem 0; }
+.boltCards { gap: 1rem; }
+.boltCard { flex: 1 1 26rem; min-width: 22rem; margin-bottom: 0 !important; }
+.boltStrong { font-weight: 700; }
+.boltButtons { gap: 0.5rem; }
+
+.boltDrop {
+  border: 1px dashed var(--sapField_BorderColor);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+  background: var(--sapField_Background);
+  max-width: 40rem;
+}
+.boltDropActive { border-color: var(--sapBrandColor); background: var(--sapInformationBackgroundColor); }
+.boltDropIcon { margin-right: 0.5rem; color: var(--sapContent_IconColor); }
+.boltDropText { margin-right: 0.5rem; color: var(--sapContent_LabelColor); }
+.boltStaged { margin-top: 0.25rem; }
+
+.boltDetailHeader { gap: 1rem; padding-bottom: 0.5rem; }
+.boltBigStatus .sapMObjStatusText { font-size: 0.9375rem; }
+.boltFacts { gap: 0.5rem 2rem; padding: 0.5rem 0; }
+.boltFact { min-width: 9rem; }
+.boltFact .sapMLabel { color: var(--sapContent_LabelColor); font-size: 0.8125rem; }
+.boltDocRow { width: 100%; padding: 0.25rem 0.5rem; }
+.boltNextStep { padding: 0.75rem 1rem; border-radius: 0.5rem; background: var(--sapWarningBackground); }

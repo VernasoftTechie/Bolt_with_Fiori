@@ -1,0 +1,21 @@
+# Build for SAP BTP (HTML5 application repository) - used by "npm run build:cf" from mta.yaml.
+# For an on-premise Fiori launchpad use ui5-deploy.yaml.
+specVersion: "3.1"
+metadata:
+  name: vernasoft.boltfiori
+type: application
+resources:
+  configuration:
+    propertiesFileSourceEncoding: UTF-8
+builder:
+  resources:
+    excludes:
+      - "/test/**"
+      - "/localService/**"
+  customTasks:
+    - name: ui5-task-zipper
+      afterTask: generateCachebusterInfo
+      configuration:
+        archiveName: vernasoftboltfiori
+        additionalFiles:
+          - xs-app.json

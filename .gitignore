@@ -3,3 +3,5 @@ dist/
 .env
 *.log
 .claude/
+mta_archives/
+app/bolt-fiori/resources/

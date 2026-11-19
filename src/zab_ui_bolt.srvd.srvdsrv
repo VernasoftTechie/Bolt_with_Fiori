@@ -1,0 +1,12 @@
+@EndUserText.label: 'Bolt - Smart Form migration (Fiori UI)'
+define service ZAB_UI_BOLT {
+  expose ZAB_CDS_C_BOLT_MIG      as Migration;
+  expose ZAB_CDS_C_BOLT_HIST     as History;
+  expose ZAB_CDS_C_BOLT_FILE     as MigrationFile;
+  expose ZAB_CDS_C_BOLT_SETUP    as Setup;
+  expose ZAB_CDS_C_BOLT_LIB      as Library;
+  expose ZAB_CDS_CE_BOLT_FORM    as SmartForm;
+  expose ZAB_CDS_CE_BOLT_STATUS  as StatusFile;
+  expose ZAB_CDS_CE_BOLT_TIMELN  as Timeline;
+  expose ZAB_CDS_CE_BOLT_SYSINFO as SystemInfo;
+}

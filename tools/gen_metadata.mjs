@@ -1,9 +1,10 @@
 // Generates the abapGit metadata (.xml / .baseinfo) for every source file in
 // src/, using the exact shapes confirmed on real systems (ZRAP_MT, VS-Tower,
 // ZHR_ESS_V1 - see docs/05_build_notes.md). Re-run after adding or renaming
-// an object:  node tools/gen_metadata.mjs
+// an object:  node tools/gen_metadata.mjs   (DDIC: node tools/gen_ddic.mjs first)
 // Rules it enforces (Bolt Playbook 5.4): .xml files carry a UTF-8 BOM, source
-// files do not; every DDLS has a .baseinfo; object names fit SAP's limits.
+// files do not; every DDLS has a .baseinfo; object names fit SAP's limits and
+// the DIL naming policy (docs/06_naming.md).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -67,12 +68,12 @@ for (const f of files.filter((x) => x.endsWith('.ddls.asddls'))) {
 
 // ---- behaviour definitions (BDEF) - shape of ZI_RAP_MT_HDR.bdef.xml --------
 const bdefText = {
-  ZI_BOLT_MIGRATION: 'Bolt - migration behavior',
-  ZC_BOLT_MIGRATION: 'Bolt - migration behavior (projection)',
-  ZI_BOLT_SETUP: 'Bolt - setup behavior',
-  ZC_BOLT_SETUP: 'Bolt - setup behavior (projection)',
-  ZI_BOLT_SYSTEM: 'Bolt - source system behavior',
-  ZC_BOLT_SYSTEM: 'Bolt - source system behavior (projection)',
+  ZAB_CDS_I_BOLT_MIG: 'Bolt - migration behavior',
+  ZAB_CDS_C_BOLT_MIG: 'Bolt - migration behavior (projection)',
+  ZAB_CDS_I_BOLT_SETUP: 'Bolt - setup behavior',
+  ZAB_CDS_C_BOLT_SETUP: 'Bolt - setup behavior (projection)',
+  ZAB_CDS_I_BOLT_LIB: 'Bolt - global library behavior',
+  ZAB_CDS_C_BOLT_LIB: 'Bolt - global library behavior (projection)',
 };
 for (const f of files.filter((x) => x.endsWith('.bdef.asbdef'))) {
   const name = f.replace('.bdef.asbdef', '').toUpperCase();
@@ -137,37 +138,25 @@ for (const f of files.filter((x) => /^[a-z0-9_]+\.clas\.abap$/.test(x))) {
 
 // ---- programs (PROG) with their text pools -------------------------------
 const tpool = {
-  ZBOLT_R_SYNC: [
-    ['R', '', 'Bolt with Fiori - send pending migrations, sync statuses'],
-    ['S', 'P_PUSH', 'Send pending/failed to GitHub'],
-    ['S', 'P_STAT', 'Read statuses from GitHub'],
+  ZABR_BOLT_SYNC: [
+    ['R', '', 'Bolt - send pending migrations to GitHub, read statuses'],
+    ['S', 'CB_PUSH', 'Send pending/failed to GitHub'],
+    ['S', 'CB_STAT', 'Read statuses from GitHub'],
     ['S', 'P_MAX', 'Maximum send attempts'],
   ],
-  ZBOLT_R_DRIVER_INDEX: [
-    ['R', '', 'Bolt with Fiori - build the Smart Form driver index'],
-    ['S', 'P_PREF1', 'First custom prefix'],
-    ['S', 'P_PREF2', 'Second custom prefix'],
-    ['S', 'P_TEST', 'Test run (nothing saved)'],
+  ZABR_BOLT_DRIVER_INDEX: [
+    ['R', '', 'Bolt - build the Smart Form driver index'],
+    ['S', 'P_PREF1', 'First Smart Form prefix'],
+    ['S', 'P_PREF2', 'Second Smart Form prefix'],
+    ['S', 'CB_TEST', 'Test run (nothing saved)'],
   ],
-  ZBOLT_R_SETUP: [
-    ['R', '', 'Bolt with Fiori - setup defaults'],
-    ['I', 'B01', 'Client and GitHub'],
-    ['I', 'B02', 'Source systems (SM59 HTTP destinations)'],
-    ['S', 'P_CUST', 'Client name'],
-    ['S', 'P_GHDST', 'GitHub SM59 destination'],
-    ['S', 'P_OWNER', 'GitHub owner'],
-    ['S', 'P_REPO', 'GitHub repository'],
-    ['S', 'P_BASE', 'Base branch'],
-    ['S', 'P_PREFX', 'Branch prefix'],
-    ['S', 'P_ADMIN', 'Administrators (comma sep.)'],
-    ['S', 'P_PATH', 'Bolt service path'],
-    ['S', 'P_DEVD', 'DEV SM59 destination'],
-    ['S', 'P_DEVC', 'DEV client'],
-    ['S', 'P_DEVL', 'DEV is this system'],
-    ['S', 'P_QAD', 'QA SM59 destination'],
-    ['S', 'P_QAC', 'QA client'],
-    ['S', 'P_PRDD', 'PRD SM59 destination'],
-    ['S', 'P_PRDC', 'PRD client'],
+  ZABR_BOLT_SELFTEST: [
+    ['R', '', 'Bolt - backend self-test (export, GitHub, AI)'],
+    ['S', 'P_FORM', 'Smart Form'],
+    ['S', 'CB_DOWN', 'Download the files to the PC'],
+    ['S', 'P_PATH', 'PC folder'],
+    ['S', 'CB_GH', 'Check the GitHub connection'],
+    ['S', 'CB_AI', 'Check the AI provider'],
   ],
 };
 for (const f of files.filter((x) => x.endsWith('.prog.abap'))) {
@@ -194,41 +183,43 @@ ${items.join('\n')}
 }
 
 // ---- service definition, binding and its gateway registration -----------
-write('zbolt_ui.srvd.xml', wrap('LCL_OBJECT_SRVD', `   <SRVD>
-    <NAME>ZBOLT_UI</NAME>
+const SRVD = 'ZAB_UI_BOLT';
+const SRVB = 'ZAB_UI_BOLT_O4';
+write(`${SRVD.toLowerCase()}.srvd.xml`, wrap('LCL_OBJECT_SRVD', `   <SRVD>
+    <NAME>${SRVD}</NAME>
     <TYPE>SRVD/SRV</TYPE>
-    <DESCRIPTION>Bolt with Fiori - Smart Form migration</DESCRIPTION>
+    <DESCRIPTION>Bolt - Smart Form migration (Fiori UI)</DESCRIPTION>
     <LANGUAGE>EN</LANGUAGE>
     <MASTER_LANGUAGE>EN</MASTER_LANGUAGE>
-    <SOURCE_URI>./zbolt_ui/source/main</SOURCE_URI>
+    <SOURCE_URI>./${SRVD.toLowerCase()}/source/main</SOURCE_URI>
     <SOURCE_TYPE>ABAP_SOURCE</SOURCE_TYPE>
     <SOURCE_ORIGIN_DESCRIPTION>ABAP Development Tools</SOURCE_ORIGIN_DESCRIPTION>
     <SRVD_SOURCE_TYPE>S</SRVD_SOURCE_TYPE>
     <SRVD_SOURCE_TYPE_DESC>Definition</SRVD_SOURCE_TYPE_DESC>
    </SRVD>`));
-write('zbolt_ui_o4.srvb.xml', wrap('LCL_OBJECT_SRVB', `   <SRVB>
+write(`${SRVB.toLowerCase()}.srvb.xml`, wrap('LCL_OBJECT_SRVB', `   <SRVB>
     <METADATA>
-     <NAME>ZBOLT_UI_O4</NAME>
+     <NAME>${SRVB}</NAME>
      <TYPE>SRVB/SVB</TYPE>
-     <DESCRIPTION>Bolt with Fiori - UI service binding (OData V4)</DESCRIPTION>
+     <DESCRIPTION>Bolt - UI service binding (OData V4)</DESCRIPTION>
     </METADATA>
     <CONTENT>
      <BIND_TYPE_IMPL>
-      <NAME>ZBOLT_UI_O4</NAME>
+      <NAME>${SRVB}</NAME>
      </BIND_TYPE_IMPL>
      <BIND_TYPE>ODATA</BIND_TYPE>
      <BIND_TYPE_VERSION>V4</BIND_TYPE_VERSION>
      <SERVICES>
       <item>
-       <SERVICE_NAME>ZBOLT_UI</SERVICE_NAME>
+       <SERVICE_NAME>${SRVD}</SERVICE_NAME>
        <SERVICE_CONTENT>
         <item>
          <SERVICE_VERSION>0001</SERVICE_VERSION>
          <RELEASE_STATE>NOT_RELEASED</RELEASE_STATE>
          <SRVD_REF>
-          <URI>/sap/bc/adt/ddic/srvd/sources/zbolt_ui</URI>
+          <URI>/sap/bc/adt/ddic/srvd/sources/${SRVD.toLowerCase()}</URI>
           <TYPE>SRVD/SRV</TYPE>
-          <NAME>ZBOLT_UI</NAME>
+          <NAME>${SRVD}</NAME>
          </SRVD_REF>
          <BIND_TYPE_DATA>
           <CONTENT>
@@ -245,9 +236,9 @@ write('zbolt_ui_o4.srvb.xml', wrap('LCL_OBJECT_SRVB', `   <SRVB>
     <PUBLISHED>true</PUBLISHED>
     <BINDING_CREATED>true</BINDING_CREATED>
    </SRVB>`));
-write('zbolt_ui_o4.g4ba.xml', wrap('LCL_OBJECT_G4BA', `   <_-IWBEP_-I_V4_MSGA>
+write(`${SRVB.toLowerCase()}.g4ba.xml`, wrap('LCL_OBJECT_G4BA', `   <_-IWBEP_-I_V4_MSGA>
     <_-IWBEP_-I_V4_MSGA>
-     <GROUP_ID>ZBOLT_UI_O4</GROUP_ID>
+     <GROUP_ID>${SRVB}</GROUP_ID>
      <SERVICE_ID>/IWBEP/COMMON</SERVICE_ID>
      <REPOSITORY_ID>DEFAULT</REPOSITORY_ID>
      <GWBEP_VERSION>031</GWBEP_VERSION>
@@ -255,19 +246,42 @@ write('zbolt_ui_o4.g4ba.xml', wrap('LCL_OBJECT_G4BA', `   <_-IWBEP_-I_V4_MSGA>
    </_-IWBEP_-I_V4_MSGA>
    <_-IWBEP_-I_V4_MSGR>
     <_-IWBEP_-I_V4_MSGR>
-     <GROUP_ID>ZBOLT_UI_O4</GROUP_ID>
+     <GROUP_ID>${SRVB}</GROUP_ID>
      <GWBEP_VERSION>031</GWBEP_VERSION>
      <ASSIGNMENT_REPO_ID>SADL</ASSIGNMENT_REPO_ID>
-     <EXTERNAL_GROUP_ID>ZBOLT_UI_O4</EXTERNAL_GROUP_ID>
+     <EXTERNAL_GROUP_ID>${SRVB}</EXTERNAL_GROUP_ID>
     </_-IWBEP_-I_V4_MSGR>
    </_-IWBEP_-I_V4_MSGR>
    <_-IWBEP_-I_V4_MSGT>
     <_-IWBEP_-I_V4_MSGT>
-     <GROUP_ID>ZBOLT_UI_O4</GROUP_ID>
+     <GROUP_ID>${SRVB}</GROUP_ID>
      <LANGUAGE>E</LANGUAGE>
-     <DESCRIPTION>Bolt with Fiori - UI service binding</DESCRIPTION>
+     <DESCRIPTION>Bolt - UI service binding</DESCRIPTION>
     </_-IWBEP_-I_V4_MSGT>
    </_-IWBEP_-I_V4_MSGT>`));
+
+// ---- package (the name itself is chosen when linking the repository in abapGit)
+write('package.devc.xml', wrap('LCL_OBJECT_DEVC', `   <DEVC>
+    <CTEXT>Bolt - Smart Form to Adobe migration console (Fiori)</CTEXT>
+   </DEVC>`));
+
+// ---- DIL naming policy (docs/06_naming.md) ----------------------------------
+const dil = [
+  [/.doma.xml$/, /^zab_dm_bolt_[a-z0-9_]+$/, 30, 'domain ZAB_DM_BOLT_*'],
+  [/.dtel.xml$/, /^zab_de_bolt_[a-z0-9_]+$/, 30, 'data element ZAB_DE_BOLT_*'],
+  [/.tabl.xml$/, /^zabt_bolt_[a-z0-9_]+$/, 16, 'table ZABT_BOLT_*'],
+  [/.ddls.asddls$/, /^zab_cds_(i|c|ce|a)_bolt_[a-z0-9_]+$/, 30, 'CDS ZAB_CDS_<I|C|CE|A>_BOLT_*'],
+  [/.prog.abap$/, /^zabr_bolt_[a-z0-9_]+$/, 40, 'report ZABR_BOLT_*'],
+  [/.clas.abap$/, /^(zcl_ab_bolt_|zcx_ab_bolt|zbp_ab_bolt_)[a-z0-9_]*$/, 30, 'class ZCL_AB_BOLT_* / ZCX_AB_BOLT / ZBP_AB_BOLT_*'],
+];
+for (const f of fs.readdirSync(src)) {
+  for (const [ext, re, max, what] of dil) {
+    if (!ext.test(f)) continue;
+    const n = f.replace(ext, '');
+    if (!re.test(n)) problems.push(`${f}: name must follow the DIL pattern ${what}`);
+    if (n.length > max) problems.push(`${f}: name longer than ${max}`);
+  }
+}
 
 // ---- every metadata .xml (incl. package, tables) carries the BOM --------------
 for (const f of fs.readdirSync(src).filter((x) => x.endsWith('.xml'))) {

@@ -1,281 +1,280 @@
 sap.ui.define([
   "vernasoft/boltfiori/controller/BaseController",
   "sap/ui/model/json/JSONModel",
-  "sap/ui/core/Fragment",
-  "sap/ui/core/routing/History",
+  "sap/ui/model/Filter",
+  "sap/ui/model/FilterOperator",
+  "sap/ui/model/Sorter",
   "sap/m/MessageBox",
-  "sap/m/MessageToast",
-  "sap/m/Dialog",
-  "sap/m/Button",
-  "sap/m/FormattedText",
-  "vernasoft/boltfiori/model/formatter"
-], function (BaseController, JSONModel, Fragment, History, MessageBox, MessageToast, Dialog, Button, FormattedText, formatter) {
+  "vernasoft/boltfiori/model/formatter",
+  "vernasoft/boltfiori/model/service"
+], function (BaseController, JSONModel, Filter, FilterOperator, Sorter, MessageBox, formatter, service) {
   "use strict";
 
-  var MAX_FILE_BYTES = 20 * 1024 * 1024;
+  // StatusBoard.jsx NOTICES - word for word.
+  var NOTICES = {
+    confirm: "Confirmation submitted - the engineer has been notified and the migration is now In Progress.",
+    problem: "Problem submitted - the engineer has been notified.",
+    question: "Question submitted - the engineer has been notified.",
+    change: "Change request submitted - the engineer has been notified.",
+    concern: "Concern submitted - the engineer has been notified."
+  };
+
+  function blank() {
+    return {
+      busy: false, mig: {}, status: {}, timeline: [], hist: [], files: [],
+      rowStatus: "", rowState: "None", stopped: false, superseded: false, disabled: false, needsConfirm: false,
+      notice: "", error: "", text: "", msgFiles: [], hasMessage: false,
+      stopNote: "", stopBusy: false, confirmBusy: false, busySend: false,
+      docs: { list: [], add: [], dirty: false }, docsBusy: false,
+      aiBusy: false, aiText: ""
+    };
+  }
 
   return BaseController.extend("vernasoft.boltfiori.controller.Detail", {
 
     onInit: function () {
-      this.getView().setModel(new JSONModel(this._empty()), "d");
-      this.router().getRoute("detail").attachPatternMatched(this._onRouteMatched, this);
+      var oModel = new JSONModel(blank());
+      this.getView().setModel(oModel, "det");
+      this.router().getRoute("detail").attachPatternMatched(this._onMatched, this);
+      this.enableDropZones();
+      // "Send" buttons follow the text and the staged files (web: !text.trim() && !files.length).
+      oModel.attachPropertyChange(this._derive, this);
     },
 
-    _empty: function () {
-      return {
-        busy: false, timeline: [], appLog: [], files: [],
-        input: { text: "", fileName: "", fileContent: "" },
-        reference: { fileName: "", fileContent: "" },
-        stopNote: "", withdraw: { reason: "", deleteBranch: false }
-      };
-    },
-
-    _onRouteMatched: function (oEvent) {
+    _onMatched: function (oEvent) {
       this._sUuid = oEvent.getParameter("arguments").migUuid;
-      this.getView().getModel("d").setData(this._empty());
-      this._clearUploaders();
-      if (!this.appModel().getProperty("/setup/SetupId")) {
-        this.loadSetup().catch(function () { /* header chips only */ });
-      }
-      // Like the web app's status board: read the branch's status file every time the page opens.
-      this._load(true);
-    },
-
-    _path: function () {
-      return "/Migration(MigUuid=" + this._sUuid + ")";
-    },
-
-    _load: async function (bRefreshFromGithub) {
-      var oD = this.getView().getModel("d");
-      oD.setProperty("/busy", true);
-      try {
-        if (bRefreshFromGithub) {
-          try {
-            await this.service().action(this._path(), "refreshStatus", {});
-            this.service().drainMessages();
-          } catch (e) {
-            // still show what is stored; the warning is in the app log/messages
-          }
-        }
-        var oMig = await this.service().object(this._path(), { $expand: "_Log,_File" });
-        this._setData(oMig);
-      } catch (e) {
-        this.showError(e);
-      } finally {
-        oD.setProperty("/busy", false);
-      }
-    },
-
-    _setData: function (oMig) {
-      var oD = this.getView().getModel("d");
-      var oSetup = this.appModel().getProperty("/setup") || {};
-      var aLogs = oMig._Log || [];
-      var byTimeDesc = function (a, b) { return String(b.EntryAt).localeCompare(String(a.EntryAt)); };
-      var sRepoUrl = oSetup.GhOwner && oSetup.GhRepo ? "https://github.com/" + oSetup.GhOwner + "/" + oSetup.GhRepo : "";
-      var oKeep = oD.getData();
-
-      var oData = Object.assign({}, oMig, {
-        busy: false,
-        statusText: formatter.statusText(oMig),
-        statusState: formatter.statusState(oMig),
-        needsClient: formatter.needsClient(oMig),
-        systemText: oMig.SystemId + (oMig.SapClient ? " (client " + oMig.SapClient + ")" : ""),
-        branchUrl: sRepoUrl && oMig.PushStatus === "PUSHED" ? sRepoUrl + "/tree/" + oMig.BranchName : "",
-        hasConfirmedWork: oMig.Status === "completed" || aLogs.some(function (l) {
-          return l.LogSource === "STATUS" && l.Heading === "Manual activity confirmed";
-        }),
-        // status file timeline: newest first (same order as the web app)
-        timeline: aLogs.filter(function (l) { return l.LogSource === "STATUS"; })
-          .sort(function (a, b) { return b.SeqNo - a.SeqNo; }),
-        appLog: aLogs.filter(function (l) { return l.LogSource === "APP"; }).sort(byTimeDesc),
-        files: (oMig._File || []).map(function (f) {
-          return Object.assign({}, f, {
-            url: sRepoUrl ? sRepoUrl + "/blob/" + oMig.BranchName + "/" + f.FilePath : ""
-          });
-        }).sort(function (a, b) { return String(a.FilePath).localeCompare(String(b.FilePath)); }),
-        input: oKeep.input || { text: "", fileName: "", fileContent: "" },
-        reference: oKeep.reference || { fileName: "", fileContent: "" },
-        stopNote: oKeep.stopNote || "",
-        withdraw: oKeep.withdraw || { reason: "", deleteBranch: false }
-      });
-      oD.setData(oData);
+      this.getView().getModel("det").setData(blank());
+      this.load();
     },
 
     onNavBack: function () {
-      if (History.getInstance().getPreviousHash() !== undefined) {
-        window.history.go(-1);
-      } else {
-        this.router().navTo("dashboard", { tab: "migration" }, true);
-      }
+      this.router().navTo("dashboard", { tab: "migration" }, true);
     },
 
     onRefresh: function () {
-      this._load(true);
+      var that = this;
+      // Read the branch again (refreshStatus also stores the basic status), then show.
+      this.withBusy(async function () {
+        await that.service().action(service.migPath(that._sUuid), "refreshStatus", {});
+        that.takeMessages();
+        await that.load();
+      }, "det", "/busy");
     },
 
-    onOpenBranch: function () {
-      var sUrl = this.getView().getModel("d").getProperty("/branchUrl");
-      if (sUrl) { window.open(sUrl, "_blank", "noopener"); }
-    },
-
-    // ------------------------------------------------------------------ files
-    onFileChosen: function (oEvent) {
-      var oUploader = oEvent.getSource();
-      var sSlot = oUploader.data("slot");
-      var oD = this.getView().getModel("d");
-      var oFile = (oEvent.getParameter("files") || [])[0];
-      if (!oFile) {
-        oD.setProperty("/" + sSlot + "/fileName", "");
-        oD.setProperty("/" + sSlot + "/fileContent", "");
-        return;
-      }
-      if (oFile.size > MAX_FILE_BYTES) {
-        MessageBox.warning(this.i18n("fileTooLarge", [oFile.name]));
-        oUploader.clear();
-        return;
-      }
-      var oReader = new FileReader();
-      oReader.onload = function () {
-        var sDataUrl = String(oReader.result || "");
-        oD.setProperty("/" + sSlot + "/fileName", oFile.name);
-        oD.setProperty("/" + sSlot + "/fileContent", sDataUrl.substring(sDataUrl.indexOf(",") + 1));
-      };
-      oReader.readAsDataURL(oFile);
-    },
-
-    _clearUploaders: function () {
-      this.getView().findAggregatedObjects(true, function (o) {
-        return o.isA && o.isA("sap.ui.unified.FileUploader");
-      }).forEach(function (o) { o.clear(); });
-    },
-
-    _resetInput: function () {
-      var oD = this.getView().getModel("d");
-      oD.setProperty("/input", { text: "", fileName: "", fileContent: "" });
-      oD.setProperty("/reference", { fileName: "", fileContent: "" });
-      oD.setProperty("/stopNote", "");
-      this._clearUploaders();
-    },
-
-    // -------------------------------------------------------------- responses
-    _run: async function (sAction, mParams, sDone) {
-      var oD = this.getView().getModel("d");
-      oD.setProperty("/busy", true);
+    /** Reads the migration, its live status file + timeline, history and files. */
+    load: async function () {
+      var oDet = this.getView().getModel("det");
+      var oService = this.service();
+      var sPath = service.migPath(this._sUuid);
+      oDet.setProperty("/busy", true);
       try {
-        var oResult = await this.service().action(this._path(), sAction, mParams);
-        this.showMessages(sDone);
-        this._resetInput();
-        if (oResult && oResult.MigUuid) {
-          var oMig = await this.service().object(this._path(), { $expand: "_Log,_File" });
-          this._setData(oMig);
-        }
-        return oResult;
-      } catch (e) {
-        this.showError(e);
-        return null;
+        var aFilter = [new Filter("MigUuid", FilterOperator.EQ, this._sUuid)];
+        var aResults = await Promise.all([
+          oService.object(sPath),
+          oService.list("/StatusFile", { filters: aFilter }),
+          oService.list("/Timeline", { filters: aFilter, sorters: [new Sorter("EntryNo", true)] }),
+          oService.list(sPath + "/_History", { sorters: [new Sorter("EventAt", true)] }),
+          oService.list(sPath + "/_File", { sorters: [new Sorter("PushedAt", true)] })
+        ]);
+        var oMig = aResults[0] || {};
+        var oStatus = aResults[1][0] || {};
+        oDet.setProperty("/mig", oMig);
+        oDet.setProperty("/status", Object.assign({}, oStatus, {
+          Found: formatter.isX(oStatus.Found), StopRequested: formatter.isX(oStatus.StopRequested)
+        }));
+        oDet.setProperty("/timeline", aResults[2]);
+        oDet.setProperty("/hist", aResults[3].map(function (o) { return Object.assign(o, { Stopped: formatter.isX(o.Stopped) }); }));
+        var aFiles = aResults[4].map(function (o) { return Object.assign(o, { Removed: formatter.isX(o.Removed) }); });
+        oDet.setProperty("/files", aFiles);
+        // Legacy documents = every file of the migration still in the list (Workspace.jsx shows
+        // the reference files and the attachments; removing only takes them off this list).
+        oDet.setProperty("/docs", {
+          list: aFiles.filter(function (o) { return !o.Removed && o.FileKind !== "STATUS"; })
+            .map(function (o) { return Object.assign({}, o, { pendingRemove: false }); }),
+          add: [], dirty: false
+        });
+        this._derive();
+      } catch (oError) {
+        oDet.setProperty("/error", this.errorOf(oError));
       } finally {
-        oD.setProperty("/busy", false);
+        oDet.setProperty("/busy", false);
       }
     },
 
-    onConfirm: function () {
-      var oIn = this.getView().getModel("d").getProperty("/input");
-      this._run("confirmManual", {
-        Note: (oIn.text || "").trim(),
-        FileName: oIn.fileName || "",
-        FileContent: oIn.fileContent || ""
-      }, this.i18n("confirmSent"));
+    /** needsConfirm / disabled / stopped exactly as StatusBoard.jsx computes them. */
+    _derive: function () {
+      var oDet = this.getView().getModel("det");
+      var oMig = oDet.getProperty("/mig") || {};
+      var oStatus = oDet.getProperty("/status") || {};
+      var bFound = !!oStatus.Found;
+      var bDisabled = (bFound ? oStatus.MigStatus : oMig.MigStatus) === "completed";
+      var bStopped = bFound ? !!oStatus.StopRequested : formatter.isX(oMig.Stopped);
+      var sWaiting = bFound ? oStatus.WaitingOn : "";
+      oDet.setProperty("/disabled", bDisabled);
+      oDet.setProperty("/stopped", bStopped);
+      oDet.setProperty("/superseded", formatter.isX(oMig.Superseded));
+      oDet.setProperty("/needsConfirm", !!sWaiting && sWaiting !== "engineer" && !bStopped && !bDisabled);
+      oDet.setProperty("/rowStatus", formatter.rowStatusText(oMig));
+      oDet.setProperty("/rowState", formatter.rowStatusState(oMig));
+      oDet.setProperty("/hasMessage", !!String(oDet.getProperty("/text") || "").trim() || (oDet.getProperty("/msgFiles") || []).length > 0);
+      var oDocs = oDet.getProperty("/docs") || { list: [], add: [] };
+      oDet.setProperty("/docs/dirty", (oDocs.add || []).length > 0 || (oDocs.list || []).some(function (o) { return o.pendingRemove; }));
     },
 
-    onConcern: function (oEvent) {
-      var sKind = oEvent.getSource().data("kind") || "concern";
-      var oIn = this.getView().getModel("d").getProperty("/input");
-      if (!(oIn.text || "").trim() && !oIn.fileContent) {
-        MessageToast.show(this.i18n("typeConcernFirst"));
-        return;
-      }
-      this._run("raiseConcern", {
-        Kind: sKind,
-        Text: (oIn.text || "").trim(),
-        FileName: oIn.fileName || "",
-        FileContent: oIn.fileContent || ""
-      }, this.i18n("concernSent"));
+    /** Notices disappear after 8 seconds (StatusBoard.jsx). */
+    _notice: function (sText) {
+      var oDet = this.getView().getModel("det");
+      oDet.setProperty("/notice", sText);
+      clearTimeout(this._iNotice);
+      this._iNotice = setTimeout(function () { oDet.setProperty("/notice", ""); }, 8000);
     },
+
+    /** Runs one communication-panel action; the error is shown in the panel, not a popup. */
+    _panelAction: async function (sFlag, fnWork) {
+      var oDet = this.getView().getModel("det");
+      oDet.setProperty(sFlag, true);
+      oDet.setProperty("/error", "");
+      try {
+        await fnWork();
+        this.takeMessages();
+        await this.load();
+        return true;
+      } catch (oError) {
+        oDet.setProperty("/error", this.errorOf(oError));
+        return false;
+      } finally {
+        oDet.setProperty(sFlag, false);
+      }
+    },
+
+    // ---- stop / resume ----
 
     onStop: function () {
-      var sNote = (this.getView().getModel("d").getProperty("/stopNote") || "").trim();
-      MessageBox.confirm(this.i18n("stopConfirm"), {
-        onClose: function (sAction) {
-          if (sAction === MessageBox.Action.OK) {
-            this._run("setStop", { StopRequested: true, Note: sNote }, this.i18n("stopSent"));
-          }
-        }.bind(this)
+      var that = this;
+      var oDet = this.getView().getModel("det");
+      this._panelAction("/stopBusy", async function () {
+        await that.service().action(service.migPath(that._sUuid), "requestStop", { Reason: (oDet.getProperty("/stopNote") || "").trim() });
+        oDet.setProperty("/stopNote", "");
       });
     },
 
     onResume: function () {
-      this._run("setStop", { StopRequested: false, Note: "" }, this.i18n("resumed"));
+      var that = this;
+      this._panelAction("/stopBusy", async function () {
+        await that.service().action(service.migPath(that._sUuid), "resume", {});
+      });
     },
 
-    onUploadReference: function () {
-      var oRef = this.getView().getModel("d").getProperty("/reference");
-      if (!oRef.fileContent) { return; }
-      this._run("addReferenceFile", { FileName: oRef.fileName, FileContent: oRef.fileContent }, this.i18n("referenceUploaded"));
+    /** Stopped: the form can be selected again on the Smart Forms tab for a re-process run. */
+    onReprocess: function () {
+      var sForm = this.getView().getModel("det").getProperty("/mig/FormName");
+      MessageBox.information(this.i18n("reprocessHow", [sForm]), {
+        actions: [this.i18n("openSmartForms"), MessageBox.Action.CLOSE],
+        onClose: function (sAction) {
+          if (sAction === this.i18n("openSmartForms")) { this.router().navTo("dashboard", { tab: "forms" }); }
+        }.bind(this)
+      });
     },
 
-    onRetrySend: function () {
-      this._run("pushToGitHub", {}, this.i18n("sentToGithubShort"));
-    },
+    // ---- the response buttons and Raise a concern (one text + one file list) ----
 
-    onAiSummary: async function () {
-      var oD = this.getView().getModel("d");
-      oD.setProperty("/busy", true);
-      try {
-        var oResult = await this.service().action(this._path(), "aiSummary", {});
-        this.service().drainMessages();
-        var oDialog = new Dialog({
-          title: this.i18n("aiSummaryTitle", [oD.getProperty("/FormName")]),
-          contentWidth: "40rem",
-          content: [new FormattedText({ htmlText: formatter.markdown((oResult && oResult.ResultText) || "") })
-            .addStyleClass("sapUiSmallMargin")],
-          endButton: new Button({ text: this.i18n("close"), press: function () { oDialog.close(); } }),
-          afterClose: function () { oDialog.destroy(); }
+    _respond: async function (sKind) {
+      var that = this;
+      var oDet = this.getView().getModel("det");
+      var sFlag = sKind === "confirm" ? "/confirmBusy" : "/busySend";
+      var bOk = await this._panelAction(sFlag, async function () {
+        await that.service().action(service.migPath(that._sUuid), "respond", {
+          Kind: sKind,
+          Text: (oDet.getProperty("/text") || "").trim(),
+          FilesJson: await that.filesJson(oDet.getProperty("/msgFiles"))
         });
-        this.getView().addDependent(oDialog);
-        oDialog.open();
-        var oMig = await this.service().object(this._path(), { $expand: "_Log,_File" });
-        this._setData(oMig);
-      } catch (e) {
-        this.showError(e);
-      } finally {
-        oD.setProperty("/busy", false);
+      });
+      if (bOk) {
+        oDet.setProperty("/text", "");
+        oDet.setProperty("/msgFiles", []);
+        this._derive();
+        this._notice(NOTICES[sKind] || NOTICES.concern);
       }
     },
 
-    // ---------------------------------------------------------------- withdraw
-    onWithdraw: async function () {
-      this.getView().getModel("d").setProperty("/withdraw", { reason: "", deleteBranch: false });
-      if (!this._oWithdraw) {
-        this._oWithdraw = await Fragment.load({
-          id: this.getView().getId(), name: "vernasoft.boltfiori.fragment.WithdrawDialog", controller: this
+    onConfirm: function () { this._respond("confirm"); },
+
+    onSendKind: function (oEvent) { this._respond(oEvent.getSource().data("kind")); },
+
+    onSendConcern: function () { this._respond("concern"); },
+
+    onMsgFiles: function (oEvent) {
+      this.stageFiles(oEvent.getParameter("files"), "det", "/msgFiles");
+      oEvent.getSource().clear();
+      this._derive();
+    },
+
+    onMsgUnstage: function (oEvent) {
+      this.unstageFile(oEvent, "det", "/msgFiles");
+      this._derive();
+    },
+
+    // ---- Legacy documents: stage adds and removals, then Save changes ----
+
+    onDocsChosen: function (oEvent) {
+      this.stageFiles(oEvent.getParameter("files"), "det", "/docs/add");
+      oEvent.getSource().clear();
+      this._derive();
+    },
+
+    onUnstageDoc: function (oEvent) {
+      this.unstageFile(oEvent, "det", "/docs/add");
+      this._derive();
+    },
+
+    onStageRemove: function (oEvent) {
+      var oCtx = oEvent.getSource().getBindingContext("det");
+      oCtx.getModel().setProperty(oCtx.getPath() + "/pendingRemove", true);
+      this._derive();
+    },
+
+    onUndoRemove: function (oEvent) {
+      var oCtx = oEvent.getSource().getBindingContext("det");
+      oCtx.getModel().setProperty(oCtx.getPath() + "/pendingRemove", false);
+      this._derive();
+    },
+
+    onSaveDocs: async function () {
+      var that = this;
+      var oDet = this.getView().getModel("det");
+      var oDocs = oDet.getProperty("/docs");
+      var aRemove = oDocs.list.filter(function (o) { return o.pendingRemove; }).map(function (o) {
+        return String(o.FileUuid).replace(/-/g, "").toUpperCase();
+      });
+      await this.withBusy(async function () {
+        await that.service().action(service.migPath(that._sUuid), "saveLegacyDocs", {
+          FilesJson: await that.filesJson(oDocs.add),
+          RemoveIds: aRemove.join(",")
         });
-        this.getView().addDependent(this._oWithdraw);
-      }
-      this._oWithdraw.open();
+        that.showMessages();
+        await that.load();
+      }, "det", "/docsBusy");
     },
 
-    onWithdrawCancel: function () {
-      this._oWithdraw.close();
+    // ---- send again / AI summary ----
+
+    onSendAgain: function () {
+      var that = this;
+      this.withBusy(async function () {
+        await that.service().action(service.migPath(that._sUuid), "pushToGitHub", {});
+        that.showMessages();
+        await that.load();
+      }, "det", "/busy");
     },
 
-    onWithdrawConfirm: async function () {
-      var oW = this.getView().getModel("d").getProperty("/withdraw");
-      this._oWithdraw.close();
-      var oResult = await this._run("withdraw", { DeleteBranch: !!oW.deleteBranch, Reason: (oW.reason || "").trim() },
-        this.i18n("withdrawn"));
-      if (oResult) {
-        this.router().navTo("dashboard", { tab: "migration" }, true);
-      }
+    onAiSummary: function () {
+      var that = this;
+      var oDet = this.getView().getModel("det");
+      this.withBusy(async function () {
+        var oResult = await that.service().action(service.migPath(that._sUuid), "aiSummary", {});
+        that.takeMessages();
+        oDet.setProperty("/aiText", (oResult && oResult.Text) || "");
+      }, "det", "/aiBusy");
     }
   });
 });

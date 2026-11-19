@@ -1,0 +1,7 @@
+{
+  "BASEINFO": {
+    "FROM": [
+      "ZABT_BOLT_SETUP"
+    ]
+  }
+}

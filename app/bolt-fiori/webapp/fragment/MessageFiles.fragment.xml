@@ -1,0 +1,19 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:u="sap.ui.unified">
+  <!-- FilePicker.jsx for the communication panel: drag & drop or choose several
+       files, see them as a list, remove before sending. One list (det>/msgFiles)
+       shared by "I've done this", the three response buttons and "Raise a concern",
+       exactly like the web app's single `files` state. -->
+  <VBox class="boltDrop sapUiTinyMarginTopBottom">
+    <customData><core:CustomData key="bolt-drop" value="det|/msgFiles" writeToDom="true"/></customData>
+    <HBox alignItems="Center" wrap="Wrap">
+      <core:Icon src="sap-icon://upload" class="boltDropIcon"/>
+      <Text text="{i18n>dropHere}" class="boltDropText"/>
+      <u:FileUploader buttonOnly="true" buttonText="{i18n>chooseFiles}" multiple="true" sameFilenameAllowed="true"
+                      icon="sap-icon://attachment" change=".onMsgFiles"/>
+    </HBox>
+    <List items="{path: 'det>/msgFiles', templateShareable: false}" mode="Delete" delete=".onMsgUnstage"
+          visible="{= ${det>/msgFiles}.length > 0 }" showNoData="false" class="boltStaged">
+      <StandardListItem title="{det>name}" info="{path: 'det>size', formatter: '.formatter.bytes'}" icon="sap-icon://document"/>
+    </List>
+  </VBox>
+</core:FragmentDefinition>

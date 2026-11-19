@@ -1,61 +1,45 @@
-# Operator guide
+# Using Bolt — guide for the client's team
 
-What the client's operator does in Bolt with Fiori, from start to finish. It is the same process
-as before, without downloading or uploading any legacy files.
+Open the **Bolt Console** tile. The header shows the SAP system and client the app runs in, and
+three indicators: **GitHub**, **AI** and **LIVE**. New migrations can be committed only when LIVE is
+green; if not, an administrator completes the Configuration tab.
 
-## Golden rules
+## 1. Choose the Smart Forms to migrate — *Smart Forms* tab
 
-- Answer the engineer **only in the app**: *I've done this — confirm*, *Report a problem*, *Ask a
-  question*, *Request a change*, *Raise a concern*. A chat message or e-mail does not release the
-  next step.
-- One step at a time. After each request the engineer stops and waits for your answer.
-- When something fails, paste the **exact SAP message** (or attach a screenshot) when you report it.
-- In abapGit, always Stage → Commit → Push **both** objects (interface `_INT` and form `_ADT`) to the
-  migration's own branch.
+- Every custom Smart Form of this system is listed, with package, driver programs, output types and
+  last change. Search and filter (*Can be selected, In migration, Stopped, Completed*).
+- Tick the forms to migrate → **Next** → check the list → **Commit**.
+- Each form gets the next **serial number** and its own GitHub branch. Its legacy files are produced
+  in SAP and sent automatically — the dialog shows the result per form. Nothing has to be
+  downloaded or uploaded.
+- A form **in migration** or **completed** cannot be selected again. A **stopped** form can: that
+  starts a **re-process run** — new serial number, new branch, freshly produced files; the stopped
+  run is closed.
+- *Export* saves the list to a spreadsheet.
 
-## 1. Start migrations
+## 2. Follow the migrations — *Migration* tab
 
-1. **Smart Forms Overview** → choose the **source system** (DEV, QA, PRD).
-2. Find the forms (search, or *Available* / *In migration*). A form already in migration shows its
-   number and status and cannot be ticked again.
-3. Tick the forms → **Next** → check the list → **Commit selection**.
-4. Wait until every row says *Sent*. A row that says *Sending failed* is retried automatically, or
-   open it in the Migration tab and press *Send to GitHub again*.
+- One row per migration: serial number, form, run, status, who it is waiting on, the engineer
+  window working on it, complexity, age, last status change. The KPI tiles above count them.
+- **Needs me** shows the migrations waiting for your action (highlighted).
+- **Read statuses** reads every open migration from GitHub now (the background job does it every
+  15 minutes anyway). *Export* saves the list.
 
-Before you start, ask your administrator to make sure the form's **SmartStyle** and the **driver
-program** are known. Fonts are only exact when the style definition is available.
+## 3. Work on one migration — click a row
 
-## 2. Follow your migrations
+- **Migration status** shows the status file the engineer keeps on the branch, newest entry first.
+- **Waiting on: client** — do what the note says, then:
+  - **I've done this — confirm** (a note is optional). Only this lets the engineer continue.
+  - or **Report a problem / Ask a question / Request a change** (type a note or attach files).
+- **Raise a concern** — any time, also after completion.
+- Files: drag them onto the box or *Choose files*; remove any before sending.
+- **Stop this migration** (with a reason) pauses all work; **Resume migration** continues exactly
+  where it was. To start over instead, select the form again on the Smart Forms tab.
+- **Legacy documents** — add more reference files, or take files off the list (the branch keeps
+  them), then **Save changes**.
+- **Status history** — every event with date, user and status, kept in SAP.
+- **AI summary** — a plain-language summary of the form from its legacy grab.
 
-**Migration** tab — *Waiting on me* shows what needs you. Open a migration to see:
+## 4. Configuration (administrators)
 
-- the **status** and who it is waiting on
-- the **note** with the exact request
-- the full **activity** timeline from the branch
-
-## 3. When it is waiting on you
-
-Typical requests, in this order:
-
-| Step | What you do in SAP | Then in the app |
-|---|---|---|
-| Interface | SFP: create the empty interface `<FORM>_INT` and form `<FORM>_ADT` in the agreed package. abapGit: pull the branch; check the parameters, types, global data and initialization code; push both objects back | Confirm, or report the exact error |
-| Context | abapGit: pull; check the Context shows the number of nodes the engineer states and no deserialize error | Confirm, or report the exact error |
-| Currency/quantity references (only if SAP complains) | Note every message exactly | Report a problem; say which currency/unit field to use |
-| Layout | Pull, **Activate**, open the Layout (any warnings?), **Preview** with real data: normal, long (multi-page) and short documents | Confirm, or say which page looks wrong and attach a screenshot |
-| Extra files | — | *Add a reference file*: the SFP migration wizard's form of the same Smart Form, a legacy printout PDF |
-
-If you changed anything in Designer yourself, push it back and say so when you confirm.
-
-## 4. Stop and follow-up
-
-- **Stop this migration** pauses it. The engineer does nothing until you press **Resume**.
-- **Raise a concern** is available at any time, also after completion.
-- **AI summary** (if switched on) explains the form in plain language from its legacy grab.
-
-## 5. Administrators only
-
-- **Configuration:** connections (SAP systems, GitHub, AI), form prefixes, administrators.
-- **Withdraw** (on a migration): the form can be selected again. Optionally the branch is deleted
-  on GitHub, which is irreversible. Withdraw only if no SAP work depends on it.
-- **Import from GitHub:** adds migrations that were started with the old web console.
+See `04_installation.md` part D. Only users listed under *Administrators* can change it.
