@@ -45,6 +45,8 @@ const branches = [
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const head = git(['rev-parse', 'HEAD']);
+  const [name, email] = git(['log', '-1', '--format=%an%n%ae', head]).split(/\r?\n/);
+  const authorEnv = { GIT_AUTHOR_NAME: name, GIT_AUTHOR_EMAIL: email, GIT_COMMITTER_NAME: name, GIT_COMMITTER_EMAIL: email };
   const all = git(['ls-tree', '-r', '--name-only', 'HEAD']).split('\n').filter(Boolean);
   const src = all.filter((f) => f.startsWith('src/'));
   const counts = {};
@@ -68,7 +70,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
       const args = ['commit-tree', tree, '-m', `${message}\n\nBuilt from main ${head.slice(0, 7)} by tools/make_install_branches.mjs.`];
       if (parent) args.push('-p', parent);
       args.push('-p', head);
-      const commit = git(args);
+      // Same author as the main commit the branch is built from (no git identity needed).
+      const commit = git(args, authorEnv);
       git(['update-ref', `refs/heads/${branch}`, commit]);
       console.log(`${branch}: ${commit.slice(0, 7)} (${src.length - drop.length} files in src/)`);
     }
