@@ -1,0 +1,251 @@
+<!--
+  Bolt Console - Help content (shown on the Help page).
+  KEEP THIS FILE CURRENT: every change to the app updates the matching section
+  here and adds a line to "What's new" (CLAUDE.md rule). Sections are separated
+  by marker comments of the form  section:<id>|<title> . Allowed tags (SAPUI5
+  FormattedText): h3 h4 p ul ol li strong em code a br dl dt dd blockquote pre span.
+-->
+
+<!-- section:process|How Bolt works -->
+<h3>How Bolt works</h3>
+<p>Bolt moves your Smart Forms to Adobe Forms. It runs inside the SAP system that holds the Smart Forms, so nothing has to be downloaded or uploaded by hand.</p>
+<p>The screen is split in two:</p>
+<ul>
+  <li><strong>Left - the process</strong>, in its order: <em>1 Smart Forms</em> (choose), <em>2 Drafts</em> (committed, not on GitHub yet), <em>3 Migrations</em> (on GitHub, followed live).</li>
+  <li><strong>Right - Setup and Help</strong>: every prerequisite with its status, and this guide.</li>
+</ul>
+<h4>The flow of one form</h4>
+<ol>
+  <li>On <strong>1 Smart Forms</strong> you tick the form and choose <strong>Next</strong>, then <strong>Commit</strong>. The form gets the next <strong>serial number</strong>.</li>
+  <li>Bolt produces its legacy files in SAP - the legacy grab (<code>&lt;FORM&gt;.md</code>), the driver program sources, the Smart Form XML and every custom Smart Style it uses - and sends them to a new GitHub branch <code>&lt;prefix&gt;-&lt;form&gt;</code> together with the <strong>status file</strong>.</li>
+  <li>If GitHub cannot be reached at that moment, the form is kept as a <strong>draft</strong> (tab <em>2 Drafts</em>) and is sent later.</li>
+  <li>The migration engineer picks the branch up, builds the Adobe Form and writes every step into the status file. You see it live on <strong>3 Migrations</strong>.</li>
+  <li>When the engineer needs you (for example to pull an object with abapGit and test it), the migration shows <em>Waiting on: client</em>. You do the step and answer on the migration page - <strong>I've done this - confirm</strong>, or report a problem, ask a question, request a change.</li>
+  <li>At the end the status is <strong>Migration Completed</strong>. A concern can still be raised afterwards.</li>
+</ol>
+<p>The header shows the client name. The <strong>LIVE</strong> indicator in the Setup panel is green when GitHub, the target repository and the AI provider are ready.</p>
+
+<!-- section:forms|1 Smart Forms -->
+<h3>1 Smart Forms - choose what to migrate</h3>
+<p>Every custom Smart Form of <strong>this system</strong> (names starting with the prefixes on the Setup page, default Z and Y). There is no system to choose: the system the app runs in is the source.</p>
+<h4>Columns</h4>
+<dl>
+  <dt>Smart Form</dt><dd>Name and description.</dd>
+  <dt>Package</dt><dd>The development package of the form.</dd>
+  <dt>Printed by</dt><dd>Driver programs (from NACE and from the driver index) and, below, the output types (application/output type, e.g. <code>EF/NEU</code>).</dd>
+  <dt>Last changed</dt><dd>Date and user of the last change of the form.</dd>
+  <dt>Migration</dt><dd><em>Available</em>, or the migration of the form: <em>No. 12 - In Progress</em>, <em>No. 12 - draft</em>, <em>Stopped (No. 12) - can be re-processed</em>, <em>Migrated (No. 12)</em>. Click it to open the migration.</dd>
+</dl>
+<h4>Filters</h4>
+<p>Each filter shows its number: <em>All</em>, <em>Can be selected</em>, <em>In migration</em>, <em>Stopped</em>, <em>Completed</em>. The search looks in name, description, package, driver programs and output types.</p>
+<h4>Which forms can be selected</h4>
+<ul>
+  <li><strong>Available</strong> forms (never migrated) - yes.</li>
+  <li><strong>Stopped</strong> forms - yes: this starts a <strong>re-process run</strong> with a new serial number and a new branch <code>&lt;prefix&gt;-&lt;form&gt;-r2</code>, with freshly produced files. The stopped run is closed (<em>replaced</em>).</li>
+  <li>Forms <strong>in migration</strong> (including drafts) or <strong>completed</strong> - no. One form has one open migration at a time. Ticking one is refused with a short message; <em>Select all</em> skips them and says how many.</li>
+</ul>
+<h4>Next and Commit</h4>
+<p><strong>Next (n)</strong> opens the confirmation with the selected forms. <strong>Commit</strong> creates the migrations and sends them one after the other; each line shows its own result. If GitHub is not ready (see the Setup panel), the button reads <strong>Save as drafts</strong> and the forms wait on <em>2 Drafts</em>.</p>
+<p>The spreadsheet button exports the list as it is filtered.</p>
+
+<!-- section:drafts|2 Drafts -->
+<h3>2 Drafts - committed, not on GitHub yet</h3>
+<p>A draft is a committed Smart Form whose initial load (legacy files + status file) has not reached GitHub yet. It already has its serial number and keeps it.</p>
+<h4>How a form becomes a draft</h4>
+<ul>
+  <li>It was committed while GitHub was not connected, no target repository was set, or the token could not push.</li>
+  <li>The send failed - network, certificate (STRUST), proxy, GitHub refused, the form could not be exported. The reason is shown in the <em>Last attempt</em> column.</li>
+</ul>
+<h4>What you can do</h4>
+<ul>
+  <li><strong>Send to GitHub</strong> on a row, or <strong>Send all drafts</strong>: tries again, as often as needed, until the initial load is on GitHub. The draft then moves to <em>3 Migrations</em>.</li>
+  <li><strong>Discard</strong> (bin icon): the draft leaves the list and the form can be selected again. The record is kept (as stopped) for the history.</li>
+  <li>Click a row to open the draft's page; the same two buttons are there. Legacy documents and the communication panel appear on that page once the draft is on GitHub (the branch must exist first).</li>
+</ul>
+<p>The background job <code>ZABR_BOLT_SYNC</code> also retries drafts every 15 minutes once GitHub is set up - up to <em>Maximum send attempts</em> (default 5) per draft, so a draft that keeps failing does not run forever. Sending by hand from this tab or from the draft's page has no limit: repeat it as often as needed after fixing the cause.</p>
+
+<!-- section:migrations|3 Migrations -->
+<h3>3 Migrations - on GitHub, followed live</h3>
+<p>Every migration whose initial load is on GitHub.</p>
+<h4>Columns</h4>
+<dl>
+  <dt>No.</dt><dd>Serial number, given at Commit.</dd>
+  <dt>Smart Form</dt><dd>Form name, branch and, for a re-process, the run number.</dd>
+  <dt>Status</dt><dd>The status from the branch status file (see <em>Status values and colours</em>). A stop sign means a stop is requested.</dd>
+  <dt>Waiting on</dt><dd><em>You</em> (the client) or <em>Engineer</em>, and the engineer window working on it.</dd>
+  <dt>Complexity</dt><dd>A first impression from the form's structure: low / medium / high. Not the full risk score.</dd>
+  <dt>Updated</dt><dd>Last change of the status file, and the age of the migration (orange after 48 h, red after 120 h while not completed).</dd>
+</dl>
+<h4>Filters</h4>
+<p><em>All</em>, <em>Needs me</em> (waiting on you - highlighted, and counted on the tab), <em>In progress</em>, <em>Stopped</em>, <em>Completed</em>. <em>Show replaced runs</em> also lists stopped runs that were re-processed.</p>
+<p><strong>Read statuses</strong> reads every open migration from GitHub now (the background job does it every 15 minutes anyway). The spreadsheet button exports the list with dates (committed, picked up, completed) for progress analysis.</p>
+
+<!-- section:detail|A migration page -->
+<h3>A migration page</h3>
+<p>Opens from any list. <strong>Refresh</strong> reads the status file again.</p>
+<h4>Header</h4>
+<p>Form, serial number, branch (link to GitHub), status, package, driver programs, output types, committed (when, by whom), sent to GitHub, picked up, completed, number of files. A complexity line follows when known.</p>
+<h4>Migration status - talking to the engineer</h4>
+<ul>
+  <li>The timeline shows the status file, newest entry first: the engineer's entries and yours.</li>
+  <li><strong>Waiting on: client</strong> with the engineer's note: do what it says, then choose
+    <ul>
+      <li><strong>I've done this - confirm</strong> (a note is optional) - the only thing that lets the engineer continue after a manual step;</li>
+      <li><strong>Report a problem</strong>, <strong>Ask a question</strong>, <strong>Request a change</strong> - a note or a file is required.</li>
+    </ul></li>
+  <li><strong>Raise a concern</strong> - whenever nothing is waiting for you, also after completion.</li>
+  <li><strong>Files</strong>: drag them onto the box or <em>Choose files</em> (images, PDF, Word, text, log, XML, Markdown; up to 25 MB each); remove any before sending. They are pushed to <code>&lt;branch&gt;/concerns/&lt;time&gt;/</code> and named in your entry.</li>
+  <li>A confirmation appears for 8 seconds; an error stays in the panel with its reason.</li>
+</ul>
+<h4>Stop and resume</h4>
+<ul>
+  <li><strong>Stop this migration</strong> (with an optional reason) pauses all work; the engineer will not continue on this branch.</li>
+  <li><strong>Resume migration</strong> continues exactly where it was.</li>
+  <li><strong>Re-process instead</strong>: select the form again on <em>1 Smart Forms</em> for a fresh run on a new branch.</li>
+</ul>
+<h4>Legacy documents</h4>
+<p>The reference files on the branch. Add files (drag and drop or choose) and mark files for removal, then <strong>Save changes</strong>. Added files are pushed to the branch; removed files only leave this list - the branch is not touched, because the engineer may be working from it.</p>
+<h4>Status history (in SAP)</h4>
+<p>Every event with time, user and the status after it: committed, sent, status changed, confirmed, problem, question, change, concern, stopped, resumed, documents added/removed, replaced. Kept in SAP for analysis; the messages themselves stay in the status file.</p>
+<h4>Files on the branch, AI summary</h4>
+<p>All files Bolt put on the branch. <em>AI summary</em> writes a plain-language summary of the form from its legacy grab (with the built-in provider: the list of its sections).</p>
+
+<!-- section:statuses|Status values and colours -->
+<h3>Status values and colours</h3>
+<h4>Status of a migration (from the status file)</h4>
+<dl>
+  <dt>Queued</dt><dd>On GitHub, waiting for an engineer to pick it up.</dd>
+  <dt>In Progress</dt><dd>The engineer is working on it.</dd>
+  <dt>Interface Completed</dt><dd>The form interface is built.</dd>
+  <dt>Waiting - Manual Activity</dt><dd>A step in SAP is needed from you - see the note, then confirm.</dd>
+  <dt>Form Design In Progress</dt><dd>The layout is being built.</dd>
+  <dt>Open - Awaiting Review</dt><dd>You sent a problem, question, change or concern; the engineer will answer.</dd>
+  <dt>Migration Completed</dt><dd>Delivered. A concern can still be raised.</dd>
+</dl>
+<h4>States in Bolt</h4>
+<dl>
+  <dt>Draft - not on GitHub yet / Draft - sending failed</dt><dd>See <em>2 Drafts</em>.</dd>
+  <dt>Stopped</dt><dd>Stop requested by the client. Resume, or re-process.</dd>
+  <dt>Replaced by a re-process run</dt><dd>A stopped run that was selected again; work continues on the newer migration.</dd>
+  <dt>Draft discarded</dt><dd>A draft taken off the Drafts list; the form can be selected again.</dd>
+</dl>
+<h4>Colours</h4>
+<ul>
+  <li><strong>Green</strong> - done or connected. <strong>Blue</strong> - information, in progress, or the built-in AI provider. <strong>Orange</strong> - your action is needed, or a warning. <strong>Red</strong> - stopped, failed, or missing setup.</li>
+  <li>Setup panel: <strong>LIVE</strong> green = GitHub, repository and AI ready; <strong>SETUP NEEDED</strong> red = something is missing (marked red in the list).</li>
+</ul>
+
+<!-- section:setup|Setup page -->
+<h3>Setup page</h3>
+<p>Open it with <strong>Open setup</strong> in the Setup panel. Only users listed as <strong>Administrators</strong> can change it (everybody, while the list is empty). Everything client-specific is set here - nothing is built into the app.</p>
+<h4>Client</h4>
+<dl>
+  <dt>Client name</dt><dd>Shown in the header. Saved when you leave the field.</dd>
+  <dt>Administrators</dt><dd>SAP user IDs, comma separated. Saved when you leave the field. Your own user must be in the list (the app refuses a list without you, so nobody locks themselves out).</dd>
+</dl>
+<h4>1. Connections</h4>
+<dl>
+  <dt>GitHub - Personal access token</dt><dd>Paste it once and choose <strong>Connect</strong>. It is checked with GitHub, stored in SAP and never shown again; the card then shows <em>Connected as &lt;login&gt;</em> and the token scopes. <strong>Disconnect</strong> removes it. <em>How do I create a token?</em> shows the steps: fine-grained token, only the migration repository, <em>Contents: Read and write</em> (plus <em>Administration</em> if Bolt should create the repository).</dd>
+  <dt>AI provider</dt><dd><em>Built-in (offline)</em> needs nothing. For OpenAI (or a compatible gateway - Azure, GitHub Models, Ollama) or Anthropic: paste the API key, optionally the model, base URL and max tokens, <strong>Test connection</strong>, then <strong>Save</strong>.</dd>
+</dl>
+<h4>2. Repository</h4>
+<p>Available once GitHub and the AI provider are ready.</p>
+<dl>
+  <dt>Repository</dt><dd>The client's migration repository - <code>owner/name</code> or its URL. <strong>Check access</strong> shows "private/public - default branch - push access". <strong>Create repository</strong> creates a private one in the connected account. <strong>Save repository settings</strong> stores it (only with push access).</dd>
+  <dt>Branch prefix</dt><dd>Start of every branch name (default <code>vernasofttechie</code>; the example below the field updates as you type). Keep it - the engineers' branches follow it.</dd>
+  <dt>Global reference library</dt><dd>Logos, Smart Styles, naming standards, policies for all migrations of this client. Choose the category, add files, an optional note where they came from, <strong>Upload to &lt;category&gt;</strong> - pushed to <code>docs/global_data/&lt;category&gt;/</code> on the default branch. Removing a file only takes it off the list.</dd>
+</dl>
+<h4>Advanced</h4>
+<dl>
+  <dt>GitHub API URL</dt><dd><code>https://api.github.com</code> (GitHub Enterprise: its API URL).</dd>
+  <dt>SSL client identity</dt><dd>The STRUST PSE whose certificates are trusted for GitHub and the AI endpoint - <code>ANONYM</code> (SSL Client Anonymous) unless your Basis team uses another, e.g. <code>DFAULT</code> (SSL Client Standard).</dd>
+  <dt>GitHub / AI SM59 destination</dt><dd>Optional - only if the system must go out through a specific SM59 HTTP destination (proxy, client certificate). Blank = the URLs are used directly.</dd>
+  <dt>Status file folder</dt><dd>Keep <code>docs/legacy_grab</code> - the engineers' queue tool reads the status files there.</dd>
+  <dt>Library folder</dt><dd>Default <code>docs/global_data</code>.</dd>
+  <dt>Smart Form name prefixes</dt><dd>One or two prefixes, comma separated (default <code>Z,Y</code>) - which forms the Smart Forms list shows.</dd>
+  <dt>Count output volume</dt><dd>The legacy grab counts how often each output type printed (NACE, numbers only).</dd>
+</dl>
+
+<!-- section:prereq|Before you start (prerequisites) -->
+<h3>Before you start - prerequisites</h3>
+<h4>SAP (Basis / security)</h4>
+<ul>
+  <li>Outbound HTTPS (443) from every application server to <code>api.github.com</code> (and to the AI provider, if one is used).</li>
+  <li><strong>STRUST</strong>: the root and intermediate certificates of <code>api.github.com</code> in the PSE of <em>Advanced - SSL client identity</em> (default <em>SSL Client Anonymous</em>), then SMICM - Exit Soft.</li>
+  <li>A proxy, if needed: SICF - Client - Proxy Settings.</li>
+  <li>Roles: S_SERVICE for the OData service group <code>ZAB_UI_BOLT_O4</code> for all users; <code>S_TABU_NAM</code> on table <code>ZABT_BOLT_SECRT</code> for Basis only.</li>
+  <li>Jobs: <code>ZABR_BOLT_SYNC</code> every 15 minutes, <code>ZABR_BOLT_DRIVER_INDEX</code> daily. Run the driver index once after installation - until then the Setup panel shows <em>Driver index not built</em> and only NACE drivers are known.</li>
+</ul>
+<h4>GitHub</h4>
+<ul>
+  <li>The client's migration repository and a token with <em>Contents: Read and write</em> on it.</li>
+</ul>
+<h4>AI (optional)</h4>
+<ul>
+  <li>The built-in provider is enough for migrations. A real provider needs its API key and outbound access.</li>
+</ul>
+
+<!-- section:trouble|Troubleshooting -->
+<h3>Troubleshooting - messages and what to do</h3>
+<dl>
+  <dt>SSL handshake ... failed: SSSLERR_PEER_CERT_UNTRUSTED</dt><dd>SAP does not trust the server's certificate. Import its root + intermediate certificate in STRUST into the PSE named in the message (default SSL Client Anonymous), save, SMICM - Exit Soft, try again. If your certificates are in SSL Client Standard, set <em>Advanced - SSL client identity</em> to <code>DFAULT</code>.</dd>
+  <dt>Connection refused / timeout</dt><dd>The system cannot reach the internet directly - set the proxy (SICF - Client - Proxy Settings) or an SM59 destination under <em>Advanced</em>.</dd>
+  <dt>That token wasn't accepted by GitHub</dt><dd>Wrong, expired or incomplete token - create a new one and connect again.</dd>
+  <dt>... the token cannot push / read-only</dt><dd>Give the token <em>Contents: Read and write</em> on the repository (or add the GitHub user as collaborator with write access).</dd>
+  <dt>Couldn't find "owner/name"</dt><dd>Typo in the repository, or the token cannot see it.</dd>
+  <dt>Saved as drafts / Draft - sending failed</dt><dd>Fix the cause shown (usually one of the above), then <em>Send to GitHub</em> on <em>2 Drafts</em>.</dd>
+  <dt>Nothing is waiting for your confirmation right now</dt><dd>The engineer is not waiting for you - use <em>Raise a concern</em> to write to them.</dd>
+  <dt>This migration is stopped. Resume it first.</dt><dd>Resume, then answer.</dd>
+  <dt>Another user is committing a selection right now</dt><dd>Try again in a moment (serial numbers are given one commit at a time).</dd>
+  <dt>... is already in migration / already migrated - skipped</dt><dd>That form has an open or completed migration; open it from the Migration column.</dd>
+  <dt>Add your own user ID ... to the administrators</dt><dd>The administrators list must contain the user who saves it.</dd>
+  <dt>Only Bolt administrators can change the configuration</dt><dd>Ask an administrator, or to be added to the list.</dd>
+  <dt>The system information / the Bolt setup could not be read from SAP</dt><dd>A short dump in SAP - the SAP team checks ST22 and /IWBEP/ERROR_LOG (are all Bolt objects active?).</dd>
+</dl>
+
+<!-- section:data|What is stored where -->
+<h3>What is stored where</h3>
+<p>All tables are cross-client: one set per system, whichever client the app is opened in.</p>
+<dl>
+  <dt>ZABT_BOLT_SETUP</dt><dd>The Setup page (one row, <code>DEFAULT</code>).</dd>
+  <dt>ZABT_BOLT_SECRT</dt><dd>GitHub token and AI key - encoded, never sent to the screen.</dd>
+  <dt>ZABT_BOLT_MIG</dt><dd>One row per migration: serial and run number, branch, sent state, status, waiting on, stop, picked up / stopped / completed dates, complexity, files count.</dd>
+  <dt>ZABT_BOLT_HIST</dt><dd>One row per event (status history) - no message texts.</dd>
+  <dt>ZABT_BOLT_FILE</dt><dd>The files on each branch.</dd>
+  <dt>ZABT_BOLT_LIB</dt><dd>The global reference library list.</dd>
+  <dt>ZABT_BOLT_DRVIX</dt><dd>The driver program index.</dd>
+</dl>
+<p>The messages between you and the engineer are not copied into SAP: they stay in the status file on the branch (<code>docs/legacy_grab/&lt;form&gt;_status.md</code>), the one place both sides read.</p>
+
+<!-- section:glossary|Glossary -->
+<h3>Glossary</h3>
+<dl>
+  <dt>Branch</dt><dd>The migration's own line of work in the GitHub repository, <code>&lt;prefix&gt;-&lt;form&gt;</code> (<code>-r2</code>, <code>-r3</code> for re-process runs).</dd>
+  <dt>Status file</dt><dd>The file on the branch where the engineer and you record every step; Bolt shows it as the timeline.</dd>
+  <dt>Legacy grab</dt><dd>The automatic description of the Smart Form (interface, windows, texts, conditions, driver programs, output types) the engineer builds from.</dd>
+  <dt>Draft</dt><dd>A committed form whose initial load is not on GitHub yet.</dd>
+  <dt>Re-process run</dt><dd>A fresh migration of a stopped form, on a new branch.</dd>
+  <dt>Engineer window</dt><dd>The migration engineer's working session; shown as <em>Picked up by</em>.</dd>
+</dl>
+
+<!-- section:whatsnew|What's new -->
+<h3>What's new</h3>
+<h4>2.1.0</h4>
+<ul>
+  <li>New layout: the process on the left (1 Smart Forms, 2 Drafts, 3 Migrations), Setup and Help on the right; every number shown once.</li>
+  <li><strong>Drafts</strong>: a form committed while GitHub cannot be reached is kept with its serial number and sent later (<em>Send to GitHub</em>, <em>Send all drafts</em>, <em>Discard</em>). Commit no longer needs LIVE.</li>
+  <li>The configuration is its own <strong>Setup page</strong>; the Setup panel lists every prerequisite with its status.</li>
+  <li>This Help page, with sections and search.</li>
+  <li><em>Select all</em> on the Smart Forms list skips forms that cannot be selected with one summary.</li>
+  <li>A draft's page shows only what works before GitHub: <em>Send to GitHub</em> and <em>Discard draft</em>. Legacy documents and the communication panel appear once it is on GitHub.</li>
+  <li>A send by hand that fails is recorded under your user in the status history ("Background job" only for the sync job).</li>
+  <li>The background job no longer uses up send attempts while GitHub is not set up.</li>
+  <li>Works on smaller screens: Setup and Help move below the process, less important columns fold into the row.</li>
+</ul>
+<h4>2.0.x</h4>
+<ul>
+  <li>Full message texts (were cut at 50 characters); SSL errors say which STRUST PSE needs the certificate.</li>
+  <li>AI chip: the built-in provider is shown in blue, green only for a tested provider.</li>
+  <li>Typing a key or token enables <em>Test connection</em> / <em>Connect</em> at once; long error texts wrap.</li>
+  <li>The app keeps working when the setup cannot be read (a red line says what to check).</li>
+</ul>

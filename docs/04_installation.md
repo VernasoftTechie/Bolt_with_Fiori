@@ -9,7 +9,7 @@ fix goes back to this repository, so SAP, Fiori and GitHub stay in sync.
 | A | SAP backend (ABAP / Basis) | The ABAP objects active, the OData service published, jobs scheduled |
 | B | Network / Basis | The system can reach `api.github.com` (and the AI provider) over HTTPS |
 | C | Fiori consultant | The app deployed and on the launchpad |
-| D | Bolt administrator | The app configured — LIVE |
+| D | Bolt administrator | The app set up — LIVE |
 | E | Everybody | One form end to end |
 
 **Two repositories — don't mix them up**
@@ -17,7 +17,7 @@ fix goes back to this repository, so SAP, Fiori and GitHub stay in sync.
 | Repository | What it holds | Who uses it |
 |---|---|---|
 | `VernasoftTechie/Bolt_with_Fiori` | The **app itself** (ABAP objects in `src/`, the Fiori app in `app/bolt-fiori`) | abapGit pulls it in part A; the Fiori consultant builds from it in part C |
-| The client's **migration repository** (for Dangote: the repository in Vernasoft's client registry) | One branch per migrated form, the status files the engineer works from | Set on the Configuration tab in part D. Use the client's existing migration repository, so the engineer's queue tool keeps seeing every migration. |
+| The client's **migration repository** (for Dangote: the repository in Vernasoft's client registry) | One branch per migrated form, the status files the engineer works from | Set on the Setup page in part D. Use the client's existing migration repository, so the engineer's queue tool keeps seeing every migration. |
 
 **Names used below** (agreed 2026-11-19)
 
@@ -122,7 +122,7 @@ name is independent of them.)
 | Role | For | Contents |
 |---|---|---|
 | `Z_BOLT_USER` (name per your convention) | everybody who uses the app | Launchpad catalog/space with the Bolt tile (part C); **S_SERVICE** for the OData V4 service group `ZAB_UI_BOLT_O4` (add it on the role's *Menu* tab: *Authorization Default* → *TADIR Service* → `IWSG`/`G4BA`, or with the Fiori launchpad's role wizard) |
-| Bolt administrator | 1–2 people | the same role; their SAP user IDs are entered in the app under *Configuration → Administrators* (this replaces the web app's admin password) |
+| Bolt administrator | 1–2 people | the same role; their SAP user IDs are entered in the app under *Setup → Administrators* (this replaces the web app's admin password) |
 | Basis only | — | **S_TABU_NAM** for table `ZABT_BOLT_SECRT` (stored GitHub token / AI key) — give it to nobody else |
 
 ### A7. Background jobs (SM36)
@@ -148,7 +148,7 @@ Full detail for the client's teams: `docs/03_client_connectivity.md`. In short:
    certificates of `api.github.com` (export them from a browser) → add to the certificate list →
    save → SMICM → Administration → ICM → Exit Soft.
 3. If the system goes out through a proxy: **SICF** → *Client* → *Proxy Settings* (or, alternatively,
-   an SM59 type G destination with the proxy, entered later on the Configuration tab under
+   an SM59 type G destination with the proxy, entered later on the Setup page under
    *Advanced*).
 4. **Check:** after part D step 2 (token connected), run `ZABR_BOLT_SELFTEST` with *Check the
    GitHub connection* ticked → "GitHub: connected as …" and "Repository …: private, default branch
@@ -206,7 +206,7 @@ against the real service (fiori-tools proxy).
 
 ## Part D — Configure the app (Bolt administrator, once)
 
-Open the app → **Configuration**. Everything client-specific is set here — nothing is hard-coded,
+Open the app → **Open setup** (Setup card on the right). Everything client-specific is set here — nothing is hard-coded,
 so the same app serves any client.
 
 1. **Client name** (saved when you leave the field) and **Administrators** — enter your own SAP
@@ -222,7 +222,9 @@ so the same app serves any client.
 5. Optional: **Global reference library** — upload logos, Smart Styles, naming standards, policies.
 6. *Advanced* only if part B needed it (SM59 destinations, another SSL client) — leave the status
    folder at `docs/legacy_grab`.
-7. **Check:** the header shows **GitHub ✓ · AI ✓ · LIVE**.
+7. **Check:** the Setup card on the dashboard shows green ticks for GitHub, repository and driver
+   index, and the **LIVE** pill. (AI may stay blue *Built-in* — that is enough for migrations.)
+   Forms committed before this point wait on the *Drafts* tab: send them now.
 
 ---
 

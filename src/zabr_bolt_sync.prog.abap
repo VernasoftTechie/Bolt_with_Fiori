@@ -19,7 +19,12 @@ PARAMETERS p_max   TYPE i DEFAULT 5.
 START-OF-SELECTION.
   DATA gt_push TYPE TABLE FOR ACTION IMPORT zab_cds_i_bolt_mig\\Migration~pushToGitHub.
 
-  IF cb_push = abap_true.
+  " Drafts are sent only when GitHub is set up - otherwise every run would use up
+  " a send attempt for nothing.
+  DATA(gs_setup) = zcl_ab_bolt_config=>get_setup( ).
+  IF cb_push = abap_true AND ( gs_setup-gh_token_set = abap_false OR gs_setup-gh_repo IS INITIAL ).
+    WRITE: / `GitHub is not set up yet (Setup page) - drafts are not sent.`.
+  ELSEIF cb_push = abap_true.
     SELECT mig_uuid, form_name, push_attempts FROM zabt_bolt_mig
       WHERE ( push_status = @zcl_ab_bolt_config=>gc_push-pending OR push_status = @zcl_ab_bolt_config=>gc_push-failed )
         AND stopped    = @abap_false

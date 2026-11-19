@@ -12,7 +12,8 @@ sap.ui.define([], function () {
     waiting_manual: "Waiting — Manual Activity",
     layout_in_progress: "Form Design In Progress",
     completed: "Migration Completed",
-    open_for_concerns: "Open — Awaiting Review"
+    open_for_concerns: "Open — Awaiting Review",
+    draft: "Draft - not on GitHub yet"
   };
   // StatusBoard.jsx STATUS_CLASS: complete = green, everything else pending.
   var COMPLETE = { interface_completed: true, completed: true };
@@ -140,8 +141,8 @@ sap.ui.define([], function () {
     rowStatusText: function (oMig) {
       if (!oMig) { return ""; }
       if (isX(oMig.Superseded)) { return "Replaced by a re-process run"; }
-      if (oMig.PushStatus === "PENDING") { return isX(oMig.Stopped) ? "Stopped (not sent)" : "Sending to GitHub"; }
-      if (oMig.PushStatus === "FAILED") { return isX(oMig.Stopped) ? "Stopped (send failed)" : "Sending failed"; }
+      if (oMig.PushStatus === "PENDING") { return isX(oMig.Stopped) ? "Draft discarded" : "Draft - not on GitHub yet"; }
+      if (oMig.PushStatus === "FAILED") { return isX(oMig.Stopped) ? "Draft discarded" : "Draft - sending failed"; }
       if (isX(oMig.Stopped)) { return "Stopped"; }
       return formatter.statusLabel(oMig.MigStatus || "queued");
     },
@@ -162,12 +163,15 @@ sap.ui.define([], function () {
         oMig.WaitingOn && oMig.WaitingOn !== "engineer");
     },
 
-    /** Migration category for the filters and KPI tiles. */
+    /**
+     * Migration category: draft = committed, initial load not on GitHub yet
+     * (Drafts tab); otherwise the filters of the Migrations tab.
+     */
     category: function (oMig) {
       if (isX(oMig.Superseded)) { return "replaced"; }
-      if (oMig.MigStatus === "completed") { return "completed"; }
+      if (oMig.MigStatus === "completed" && oMig.PushStatus === "PUSHED") { return "completed"; }
       if (isX(oMig.Stopped)) { return "stopped"; }
-      if (oMig.PushStatus === "FAILED") { return "problems"; }
+      if (oMig.PushStatus !== "PUSHED") { return "draft"; }
       return "active";
     },
 
@@ -190,6 +194,7 @@ sap.ui.define([], function () {
     formStateText: function (sState, iSerial, sStatus, iRun) {
       switch (sState) {
         case "ACTIVE": return "No. " + iSerial + " · " + formatter.statusLabel(sStatus) + (iRun > 1 ? " (run " + iRun + ")" : "");
+        case "DRAFT": return "No. " + iSerial + " · draft";
         case "STOPPED": return "Stopped (No. " + iSerial + ") · can be re-processed";
         case "COMPLETED": return "Migrated (No. " + iSerial + ")";
         default: return "Available";

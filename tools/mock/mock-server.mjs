@@ -267,7 +267,7 @@ function smartForms() {
     }
     return { FormName, Description, DevPackage, CreatedBy: 'ABAP07', CreatedOn: '2015-03-25', ChangedBy: 'C.KKUMAR',
       ChangedOn: `2026-${String((i % 9) + 1).padStart(2, '0')}-15`, DriverProgs, OutputTypes, MigState, Selectable,
-      LastSerialNo: last ? last.SerialNo : 0, LastRunNo: last ? last.RunNo : 0, LastStatus: last ? last.MigStatus : '', LastMigUuid: last ? last.MigUuid : null };
+      LastSerialNo: last ? last.SerialNo : 0, LastRunNo: last ? last.RunNo : 0, LastStatus: last ? (last.PushStatus !== 'PUSHED' ? 'draft' : last.MigStatus) : '', LastMigUuid: last ? last.MigUuid : null };
   });
 }
 function statusRow(m) {
@@ -284,7 +284,7 @@ function sysInfo() {
   const admins = (s.AdminUsers || '').toUpperCase().split(',').map((x) => x.trim()).filter(Boolean);
   return { SystemId: SYSID, Client: '100', HostName: 's4d-app01 (example)', UserName: ME, CustomerName: s.CustomerName, SetupExists: true,
     IsAdmin: !admins.length || admins.includes(ME), AdminsDefined: admins.length > 0, GitHubReady: github, RepoReady: repo, AiReady: ai,
-    Live: github && repo && ai, RepoUrl: s.GhRepo ? `https://github.com/${s.GhRepo}` : '', IndexBuilt: true, AppVersion: '2.0.0 (mock)' };
+    Live: github && repo && ai, RepoUrl: s.GhRepo ? `https://github.com/${s.GhRepo}` : '', IndexBuilt: true, AppVersion: '2.1.0 (mock)' };
 }
 
 // --------------------------------------------------------------- helpers
@@ -501,7 +501,6 @@ async function runAction(set, keys, name, p, messages) {
   switch (name) {
     case 'commitSelection': {
       const sys = sysInfo();
-      if (!sys.Live) fail('Connect GitHub on the Configuration tab first.');
       let serial = Math.max(0, ...db.Migration.map((m) => m.SerialNo));
       const created = [];
       const seen = new Set();
@@ -526,7 +525,7 @@ async function runAction(set, keys, name, p, messages) {
         if (last) { last.Superseded = true; touch(last); hist(last, 'REPROCESSED'); }
         created.push(mig);
       });
-      if (created.length) messages.push(msg(`${created.length} Smart Form(s) committed for migration.`));
+      if (created.length) messages.push(sys.RepoReady ? msg(`${created.length} Smart Form(s) committed for migration.`) : msg(`${created.length} Smart Form(s) saved as drafts - GitHub is not connected yet. Send them from the Drafts tab once Setup is complete.`, 3));
       return { body: { value: created.map((r) => shape('Migration', r)) }, messages };
     }
     case 'pushToGitHub': {
@@ -537,7 +536,7 @@ async function runAction(set, keys, name, p, messages) {
       self.PushAttempts += 1;
       if (self.FormName === 'ZHR_PAYSLIP') {
         Object.assign(self, { PushStatus: 'FAILED', PushMsg: 'Smart Form ZHR_PAYSLIP could not be loaded for export: the form is locked by user HRDEV. (example)' });
-        touch(self); hist(self, 'PUSH_FAILED', 'SYSTEM');
+        touch(self); hist(self, 'PUSH_FAILED', 'CLIENT'); // sent by hand (the sync job would write SYSTEM)
         messages.push(msg(`${self.FormName}: ${self.PushMsg}`, 3));
         return one(self);
       }

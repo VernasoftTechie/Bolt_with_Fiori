@@ -312,18 +312,14 @@ CLASS lhc_migration IMPLEMENTATION.
     DATA(ls_key) = keys[ 1 ].
     DATA(ls_setup) = zcl_ab_bolt_config=>get_setup( ).
 
-    " Same gate as the web app's "+ New migration": everything connected (LIVE).
+    " No connection gate: a form committed while GitHub is not ready (not connected,
+    " repository not set, network down) is kept as a DRAFT with its serial number -
+    " PENDING/FAILED on the Drafts tab - and sent with "Send to GitHub" or by the
+    " job until its initial load is on GitHub.
     DATA(lv_not_live) = COND string(
-      WHEN ls_setup-gh_token_set = abap_false THEN `Connect GitHub on the Configuration tab first.`
-      WHEN ls_setup-gh_repo IS INITIAL        THEN `Set the target repository on the Configuration tab first.`
-      WHEN ls_setup-gh_can_push = abap_false  THEN `The GitHub token cannot push to the target repository - check access on the Configuration tab.`
-      WHEN zcl_ab_bolt_ai=>is_ready( ls_setup ) = abap_false THEN `The AI provider needs an API key - set it on the Configuration tab.` ).
-    IF lv_not_live IS NOT INITIAL.
-      APPEND VALUE #( %cid = ls_key-%cid ) TO failed-migration.
-      APPEND VALUE #( %cid = ls_key-%cid %msg = msg( iv_severity = if_abap_behv_message=>severity-error
-                                                     iv_text     = lv_not_live ) ) TO reported-migration.
-      RETURN.
-    ENDIF.
+      WHEN ls_setup-gh_token_set = abap_false THEN `GitHub is not connected yet`
+      WHEN ls_setup-gh_repo IS INITIAL        THEN `no target repository is set yet`
+      WHEN ls_setup-gh_can_push = abap_false  THEN `the GitHub token cannot push to the target repository` ).
 
     " One commit at a time on this system, so two users never get the same serial number.
     CALL FUNCTION 'ENQUEUE_E_TABLE'
@@ -464,8 +460,12 @@ CLASS lhc_migration IMPLEMENTATION.
       ENTITY Migration ALL FIELDS
       WITH VALUE #( FOR ls_map IN ls_mapped-migration ( %tky = ls_map-%tky ) )
       RESULT DATA(lt_new).
-    APPEND VALUE #( %cid = ls_key-%cid %msg = msg( iv_severity = if_abap_behv_message=>severity-success
-                                                   iv_text     = |{ lines( lt_new ) } Smart Form(s) committed for migration.| ) )
+    APPEND VALUE #( %cid = ls_key-%cid
+                    %msg = msg( iv_severity = COND #( WHEN lv_not_live IS INITIAL THEN if_abap_behv_message=>severity-success
+                                                      ELSE if_abap_behv_message=>severity-warning )
+                                iv_text     = COND #( WHEN lv_not_live IS INITIAL
+                                                      THEN |{ lines( lt_new ) } Smart Form(s) committed for migration.|
+                                                      ELSE |{ lines( lt_new ) } Smart Form(s) saved as drafts - { lv_not_live }. Send them from the Drafts tab once Setup is complete.| ) ) )
       TO reported-migration.
     result = VALUE #( FOR ls_new IN lt_new ( %cid = ls_key-%cid %param = CORRESPONDING #( ls_new ) ) ).
   ENDMETHOD.
@@ -529,7 +529,9 @@ CLASS lhc_migration IMPLEMENTATION.
                               PushStatus   = zcl_ab_bolt_config=>gc_push-failed
                               PushMsg      = cut( lv_text )
                               PushAttempts = ls_mig-PushAttempts + 1 ) ).
-          add_hist( is_mig = ls_mig iv_event = zcl_ab_bolt_config=>gc_event-push_failed iv_actor = zcl_ab_bolt_config=>gc_actor-system ).
+          add_hist( is_mig = ls_mig iv_event = zcl_ab_bolt_config=>gc_event-push_failed
+                    iv_actor = COND #( WHEN sy-batch = abap_true THEN zcl_ab_bolt_config=>gc_actor-system   " the sync job
+                                       ELSE zcl_ab_bolt_config=>gc_actor-client ) ).                    " sent by hand
           " Warning, not failed: the FAILED state and its reason must be saved.
           APPEND VALUE #( %tky = ls_mig-%tky %msg = msg( iv_severity = if_abap_behv_message=>severity-warning
                                                          iv_text     = |{ ls_mig-FormName }: { lv_text }| ) ) TO reported-migration.

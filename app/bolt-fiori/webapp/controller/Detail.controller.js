@@ -48,7 +48,8 @@ sap.ui.define([
     },
 
     onNavBack: function () {
-      this.router().navTo("dashboard", { tab: "migration" }, true);
+      // Back to where the user came from (Drafts or Migrations).
+      if (window.history.length > 1) { window.history.go(-1); } else { this.router().navTo("dashboard", { tab: "migrations" }, true); }
     },
 
     onRefresh: function () {
@@ -265,6 +266,22 @@ sap.ui.define([
         that.showMessages();
         await that.load();
       }, "det", "/busy");
+    },
+
+    /** Discard a draft = local stop: it leaves the Drafts tab, the form can be selected again. */
+    onDiscardDraft: function () {
+      var that = this;
+      var oMig = this.getView().getModel("det").getProperty("/mig");
+      MessageBox.confirm(this.i18n("discardConfirm", [oMig.FormName, oMig.SerialNo]), {
+        onClose: function (sAction) {
+          if (sAction !== MessageBox.Action.OK) { return; }
+          that.withBusy(async function () {
+            await that.service().action(service.migPath(that._sUuid), "requestStop", { Reason: that.i18n("discardReason") });
+            that.takeMessages();
+            await that.load();
+          }, "det", "/busy");
+        }
+      });
     },
 
     onAiSummary: function () {

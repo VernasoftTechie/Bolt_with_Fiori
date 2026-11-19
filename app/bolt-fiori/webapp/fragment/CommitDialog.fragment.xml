@@ -6,7 +6,9 @@
           escapeHandler=".onCloseCommit">
     <content>
       <VBox class="sapUiSmallMargin">
-        <MessageStrip visible="{= !${view>/commit/committed} }" text="{i18n>commitIntro}" type="Information" showIcon="true"
+        <MessageStrip visible="{= !${view>/commit/committed} &amp;&amp; ${view>/commit/asDrafts} }" text="{i18n>commitDraftIntro}" type="Warning" showIcon="true"
+                      class="sapUiSmallMarginBottom"/>
+        <MessageStrip visible="{= !${view>/commit/committed} &amp;&amp; !${view>/commit/asDrafts} }" text="{i18n>commitIntro}" type="Information" showIcon="true"
                       class="sapUiSmallMarginBottom"/>
         <MessageStrip visible="{view>/commit/done}" text="{i18n>commitDone}" type="Success" showIcon="true"
                       class="sapUiSmallMarginBottom"/>
@@ -27,11 +29,11 @@
       </VBox>
     </content>
     <beginButton>
-      <Button text="{i18n>commit}" type="Emphasized" press=".onCommit"
+      <Button text="{= ${view>/commit/asDrafts} ? ${i18n>saveAsDrafts} : ${i18n>commit} }" type="Emphasized" press=".onCommit"
               visible="{= !${view>/commit/committed} }" enabled="{= !${view>/commit/busy} }"/>
     </beginButton>
     <endButton>
-      <Button text="{= ${view>/commit/done} ? ${i18n>openMigrations} : ${i18n>cancel} }" press=".onCloseCommit"
+      <Button text="{= ${view>/commit/done} ? ${i18n>close} : ${i18n>cancel} }" press=".onCloseCommit"
               enabled="{= !${view>/commit/busy} }"/>
     </endButton>
   </Dialog>
