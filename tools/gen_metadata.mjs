@@ -47,7 +47,7 @@ for (const f of files.filter((x) => x.endsWith('.ddls.asddls'))) {
   else if (/as\s+projection\s+on/i.test(text)) type = 'P';
   else type = 'W';
   if (name.length > 30) problems.push(`${name}: CDS name longer than 30`);
-  if (label.length > 60) problems.push(`${name}: label longer than 60`);
+  if (label.length > 40) problems.push(`${name}: @EndUserText.label longer than 40 (activation warning)`);
   write(`${f.replace('.asddls', '.xml')}`, wrap('LCL_OBJECT_DDLS', `   <DDLS>
     <DDLNAME>${name}</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
