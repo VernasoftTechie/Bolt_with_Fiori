@@ -33,6 +33,10 @@
 8. Before pushing: commit on `main`, then `node tools/make_install_branches.mjs`, then push `main`
    and `install/*` together, so SAP (abapGit), Fiori and GitHub stay in sync.
 9. Log every activation/runtime error and its fix in `docs/BUILD_ISSUES_LOG.md`.
+10. **Help is part of every change.** Any change a user can see (screen, button, status, message,
+    setup field, job, prerequisite) also updates `app/bolt-fiori/webapp/help/help.html` — the
+    section concerned and *What's new* (version = `gc_version` in `ZCL_AB_BOLT_Q_SYSINFO`, manifest,
+    mock) — and `docs/02_operator_guide.md`. Sections are split at `<!-- section:<id>|<title> -->`.
 
 ## Commit trailer
 

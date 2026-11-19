@@ -2,7 +2,7 @@
 "! Same calls and the same messages as Bolt Console's server/src/github.js:
 "! verify a pasted token (GET /user + X-OAuth-Scopes), check repository access,
 "! create a private repository, and the branch/file operations of a migration.
-"! The token is the one pasted on the Configuration tab (ZABT_BOLT_SECRT),
+"! The token is the one pasted on the Setup page (ZABT_BOLT_SECRT),
 "! sent as "Authorization: Bearer"; it is never returned by the service.
 "!
 "! A new migration branch is created as ONE commit holding every reference
@@ -231,7 +231,7 @@ CLASS zcl_ab_bolt_github IMPLEMENTATION.
     DATA(ls_setup) = zcl_ab_bolt_config=>get_setup( ).
     DATA(lv_token) = zcl_ab_bolt_config=>get_secret( zcl_ab_bolt_config=>gc_secret-github_token ).
     IF lv_token IS INITIAL.
-      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `Connect a GitHub token first (Configuration > 1. Connections > GitHub).` ).
+      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `Connect a GitHub token first (Setup page > GitHub).` ).
     ENDIF.
     ro_github = NEW zcl_ab_bolt_github( is_endpoint = endpoint_of( ls_setup )
                                         iv_token    = lv_token ).
@@ -242,10 +242,10 @@ CLASS zcl_ab_bolt_github IMPLEMENTATION.
     DATA(ls_setup) = zcl_ab_bolt_config=>get_setup( ).
     DATA(lv_token) = zcl_ab_bolt_config=>get_secret( zcl_ab_bolt_config=>gc_secret-github_token ).
     IF lv_token IS INITIAL.
-      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `GitHub is not connected - paste a token on the Configuration tab.` ).
+      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `GitHub is not connected - paste a token on the Setup page.` ).
     ENDIF.
     IF parse_repo( ls_setup-gh_repo ) IS INITIAL.
-      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `No target repository is set - enter it on the Configuration tab (2. Repository).` ).
+      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `No target repository is set - enter it on the Setup page (Repository).` ).
     ENDIF.
     ro_github = NEW zcl_ab_bolt_github( is_endpoint = endpoint_of( ls_setup )
                                         iv_token    = lv_token
@@ -279,7 +279,7 @@ CLASS zcl_ab_bolt_github IMPLEMENTATION.
 
   METHOD repo_path.
     IF gs_repo IS INITIAL.
-      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `No target repository is set - enter it on the Configuration tab (2. Repository).` ).
+      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `No target repository is set - enter it on the Setup page (Repository).` ).
     ENDIF.
     rv_path = |/repos/{ gs_repo-owner }/{ gs_repo-repo }{ iv_suffix }|.
   ENDMETHOD.
@@ -341,7 +341,7 @@ CLASS zcl_ab_bolt_github IMPLEMENTATION.
         CLEAR ls_error.
     ENDTRY.
     DATA(lv_hint) = SWITCH string( is_response-code
-      WHEN 401 THEN ` The GitHub token was not accepted - reconnect with a fresh token on the Configuration tab.`
+      WHEN 401 THEN ` The GitHub token was not accepted - reconnect with a fresh token on the Setup page.`
       WHEN 403 THEN | { forbidden_text( is_response ) }|
       WHEN 404 THEN ` The repository or branch was not found, or the token cannot see it.`
       ELSE `` ).

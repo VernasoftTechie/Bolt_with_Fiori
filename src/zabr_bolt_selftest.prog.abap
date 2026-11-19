@@ -9,7 +9,7 @@
 *& 2. Optionally downloads them to a PC folder, to compare the .xml with
 *&    SMARTFORMS > Utilities > Download Form (installation guide step B2.4).
 *& 3. Optionally checks the GitHub connection and the AI provider stored on
-*&    the Configuration tab (read-only calls: GET /user, GET /repos/...).
+*&    the Setup page (read-only calls: GET /user, GET /repos/...).
 *&---------------------------------------------------------------------*
 REPORT zabr_bolt_selftest.
 
@@ -23,7 +23,7 @@ START-OF-SELECTION.
   DATA(gs_setup) = zcl_ab_bolt_config=>get_setup( ).
   IF gs_setup IS INITIAL.
     gs_setup = zcl_ab_bolt_config=>default_setup( ).
-    WRITE: / `No setup row yet - using the defaults (open the Configuration tab once to create it).`.
+    WRITE: / `No setup row yet - using the defaults (open the Bolt app once to create it).`.
   ENDIF.
 
   " ---- 1. legacy files ---------------------------------------------------

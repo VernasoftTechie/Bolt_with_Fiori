@@ -1,0 +1,244 @@
+<mvc:View
+  controllerName="vernasoft.boltfiori.controller.Setup"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:core="sap.ui.core"
+  xmlns:u="sap.ui.unified"
+  xmlns="sap.m"
+  height="100%"
+  displayBlock="true">
+
+  <!-- Setup: everything that must be in place before (and while) Smart Forms are
+       migrated - the same Configure page as the web app. Administrators only. -->
+  <Page id="setupPage" title="{i18n>setupTitle}" showNavButton="true" navButtonPress=".onNavBack"
+        busy="{view>/cfgBusy}" busyIndicatorDelay="300" class="boltPage">
+    <headerContent>
+      <Button icon="sap-icon://sys-help" text="{i18n>help}" press=".onOpenHelp"/>
+    </headerContent>
+    <content>
+      <VBox class="sapUiSmallMargin">
+      <VBox class="boltConfig">
+        <MessageStrip visible="{= !${app>/isAdmin} }" type="Information" showIcon="true"
+                      text="{i18n>configReadOnly}" class="sapUiSmallMarginBottom"/>
+        <MessageStrip visible="{= ${app>/isAdmin} &amp;&amp; !${app>/sys/AdminsDefined} }" type="Warning" showIcon="true"
+                      text="{i18n>noAdminsYet}" class="sapUiSmallMarginBottom"/>
+
+        <!-- Client name (saved when the field is left, like Configure.jsx) -->
+        <Panel headerText="{i18n>cfgClient}" class="boltPanel">
+          <VBox class="boltFields">
+            <Label text="{i18n>cfgClientName}" labelFor="cfgCustomer"/>
+            <Input id="cfgCustomer" value="{view>/cfg/CustomerName}" placeholder="{i18n>cfgClientPlaceholder}"
+                   editable="{app>/isAdmin}" change=".onCustomerBlur"/>
+            <Text text="{i18n>cfgClientHint}" class="boltHint"/>
+            <Label text="{i18n>cfgAdmins}" labelFor="cfgAdmins"/>
+            <Input id="cfgAdmins" value="{view>/cfg/AdminUsers}" placeholder="{i18n>cfgAdminsPlaceholder}"
+                   editable="{app>/isAdmin}" change=".onAdminsBlur"/>
+            <Text text="{i18n>cfgAdminsHint}" class="boltHint"/>
+          </VBox>
+        </Panel>
+
+        <!-- 1. Connections -->
+        <Title text="{i18n>cfgConnections}" level="H2" class="boltSection"/>
+        <HBox wrap="Wrap" class="boltCards">
+          <!-- GitHub (GitHubConnection.jsx) -->
+          <Panel class="boltPanel boltCard">
+            <headerToolbar>
+              <Toolbar>
+                <Title text="{i18n>cfgGithub}"/>
+                <ToolbarSpacer/>
+                <ObjectStatus text="{= ${app>/ready/github} ? ${i18n>connected} : ${i18n>notConnected} }"
+                              state="{= ${app>/ready/github} ? 'Success' : 'None' }"/>
+              </Toolbar>
+            </headerToolbar>
+            <VBox class="boltFields">
+              <VBox visible="{app>/ready/github}">
+                <Text text="{i18n>connectedAs} {app>/setup/GhLogin} ({app>/setup/GhUserName})" class="boltStrong"/>
+                <Text text="{= ${app>/setup/GhScopes} ? ${i18n>tokenScopes} + ' ' + ${app>/setup/GhScopes} : ${i18n>fineGrained} }" class="boltHint"/>
+                <Button text="{i18n>disconnect}" press=".onDisconnectGitHub" enabled="{app>/isAdmin}" class="sapUiTinyMarginTop"/>
+              </VBox>
+              <VBox visible="{= !${app>/ready/github} }">
+                <Label text="{i18n>cfgToken}" labelFor="cfgToken"/>
+                <Input id="cfgToken" type="Password" value="{view>/token}" valueLiveUpdate="true" editable="{app>/isAdmin}"
+                       placeholder="github_pat_… or ghp_…" submit=".onConnectGitHub"/>
+                <Text text="{i18n>cfgTokenHint}" class="boltHint"/>
+                <Button text="{i18n>connect}" type="Emphasized" press=".onConnectGitHub"
+                        enabled="{= ${app>/isAdmin} &amp;&amp; !!${view>/token} &amp;&amp; !${view>/cfgBusy} }" class="sapUiTinyMarginTop"/>
+              </VBox>
+              <Link text="{i18n>howToken}" press=".onTokenHelp" class="sapUiTinyMarginTop"/>
+            </VBox>
+          </Panel>
+
+          <!-- AI provider (AiSettings.jsx) -->
+          <Panel class="boltPanel boltCard">
+            <headerToolbar>
+              <Toolbar>
+                <Title text="{i18n>cfgAi}"/>
+                <ToolbarSpacer/>
+                <ObjectStatus text="{= (${app>/setup/AiProvider} === 'mock' || !${app>/setup/AiProvider}) ? ${i18n>builtinNoModel} : (${app>/ready/ai} ? (${app>/setup/AiCheckRes} === 'ERROR' ? ${i18n>testFailed} : ${i18n>ready}) : ${i18n>needsKey}) }"
+                              state="{= (${app>/setup/AiProvider} === 'mock' || !${app>/setup/AiProvider}) ? 'Information' : (${app>/ready/ai} &amp;&amp; ${app>/setup/AiCheckRes} !== 'ERROR' ? 'Success' : 'Warning') }"/>
+              </Toolbar>
+            </headerToolbar>
+            <VBox class="boltFields">
+              <Text text="{view>/ai/currentText}" class="boltHint"/>
+              <Label text="{i18n>cfgAiProvider}" labelFor="cfgAiProvider"/>
+              <Select id="cfgAiProvider" selectedKey="{view>/ai/Provider}" enabled="{app>/isAdmin}" width="22rem" change=".onAiProviderChange">
+                <core:Item key="mock" text="{i18n>aiMock}"/>
+                <core:Item key="openai" text="{i18n>aiOpenAi}"/>
+                <core:Item key="anthropic" text="{i18n>aiAnthropic}"/>
+              </Select>
+              <VBox visible="{= ${view>/ai/Provider} !== 'mock' }">
+                <Label text="{= ${view>/ai/keySaved} ? ${i18n>cfgAiKeySaved} : ${i18n>cfgAiKey} }" labelFor="cfgAiKey"/>
+                <Input id="cfgAiKey" type="Password" value="{view>/ai/ApiKey}" valueLiveUpdate="true" liveChange=".onAiKeyLive" editable="{app>/isAdmin}"
+                       placeholder="{= ${view>/ai/keySaved} ? ${i18n>keyUnchanged} : ${i18n>cfgAiKeyPlaceholder} }"/>
+              </VBox>
+              <Label text="{i18n>cfgAiModel}" labelFor="cfgAiModel"/>
+              <Input id="cfgAiModel" value="{view>/ai/Model}" editable="{app>/isAdmin}" placeholder="{view>/ai/defaultModel}"/>
+              <VBox visible="{= ${view>/ai/Provider} !== 'mock' }">
+                <Label text="{i18n>cfgAiBaseUrl}" labelFor="cfgAiUrl"/>
+                <Input id="cfgAiUrl" value="{view>/ai/BaseUrl}" editable="{app>/isAdmin}" placeholder="{i18n>cfgAiBaseUrlPlaceholder}"/>
+                <Label text="{i18n>cfgAiMaxTokens}" labelFor="cfgAiTokens"/>
+                <StepInput id="cfgAiTokens" value="{view>/ai/MaxTokens}" min="16" max="64000" step="256" editable="{app>/isAdmin}" width="12rem"/>
+              </VBox>
+              <Text text="{= ${view>/ai/Provider} === 'anthropic' ? ${i18n>aiAnthropicHelp} : (${view>/ai/Provider} === 'openai' ? ${i18n>aiOpenAiHelp} : ${i18n>aiMockHelp}) }" class="boltHint"/>
+              <Text visible="{view>/ai/blockedForKey}" text="{i18n>enterKeyFirst}" class="boltHint"/>
+              <HBox alignItems="Center" wrap="Wrap" class="sapUiTinyMarginTop boltButtons">
+                <Button text="{i18n>testConnection}" press=".onTestAi" enabled="{= ${app>/isAdmin} &amp;&amp; !${view>/cfgBusy} &amp;&amp; !${view>/ai/blockedForKey} }"/>
+              </HBox>
+              <MessageStrip visible="{= !!${view>/ai/testText} }" text="{view>/ai/testText}"
+                            type="{= ${view>/ai/testOk} ? 'Success' : 'Error' }" showIcon="true"/>
+            </VBox>
+          </Panel>
+        </HBox>
+        <HBox alignItems="Center" class="boltSaveBar">
+          <Button text="{i18n>save}" type="Emphasized" press=".onSaveAi"
+                  enabled="{= ${app>/isAdmin} &amp;&amp; !${view>/cfgBusy} &amp;&amp; !${view>/ai/blockedForKey} }"/>
+          <Text text="{i18n>saveAiHint}" class="boltInlineMsg"/>
+        </HBox>
+
+        <!-- 2. Repository (TargetRepo.jsx) - gated until GitHub and AI are ready -->
+        <Title text="{i18n>cfgRepository}" level="H2" class="boltSection"/>
+        <MessageStrip visible="{= !(${app>/ready/github} &amp;&amp; ${app>/ready/ai}) }" type="Information" showIcon="true"
+                      text="{i18n>repoGated}" class="sapUiSmallMarginBottom"/>
+        <Panel class="boltPanel" visible="{= ${app>/ready/github} &amp;&amp; ${app>/ready/ai} }">
+          <headerToolbar>
+            <Toolbar>
+              <Title text="{i18n>cfgTargetRepo}"/>
+              <ToolbarSpacer/>
+              <Link text="{app>/sys/RepoUrl}" href="{app>/sys/RepoUrl}" target="_blank" visible="{= !!${app>/sys/RepoUrl} }"/>
+            </Toolbar>
+          </headerToolbar>
+          <VBox class="boltFields">
+            <Label text="{i18n>cfgRepo}" labelFor="cfgRepo" required="true"/>
+            <Input id="cfgRepo" value="{view>/repo/Repo}" valueLiveUpdate="true" editable="{app>/isAdmin}" placeholder="{i18n>cfgRepoPlaceholder}"/>
+            <Label text="{i18n>cfgBranchPrefix}" labelFor="cfgPrefix"/>
+            <Input id="cfgPrefix" value="{view>/repo/BranchPrefix}" valueLiveUpdate="true" editable="{app>/isAdmin}" placeholder="vernasofttechie" liveChange=".onPrefixLive"/>
+            <Text text="{= ${i18n>cfgPrefixHint} + ' ' + ${path: 'view>/repo/BranchPrefix', formatter: '.formatter.branchExample'} }" class="boltHint"/>
+            <HBox wrap="Wrap" alignItems="Center" class="sapUiTinyMarginTop boltButtons">
+              <Button text="{i18n>checkAccess}" press=".onCheckRepo" enabled="{= ${app>/isAdmin} &amp;&amp; !!${view>/repo/Repo} &amp;&amp; !${view>/cfgBusy} }"/>
+              <Button text="{i18n>createRepo}" icon="sap-icon://add" press=".onCreateRepo" enabled="{= ${app>/isAdmin} &amp;&amp; !!${view>/repo/Repo} &amp;&amp; !${view>/cfgBusy} }"/>
+            </HBox>
+            <MessageStrip visible="{= !!${view>/repo/checkText} }" text="{view>/repo/checkText}"
+                          type="{= ${view>/repo/checkOk} ? 'Success' : 'Warning' }" showIcon="true"/>
+            <HBox alignItems="Center" class="sapUiSmallMarginTop">
+              <Button text="{i18n>saveRepo}" type="Emphasized" press=".onSaveRepo"
+                      enabled="{= ${app>/isAdmin} &amp;&amp; !!${view>/repo/Repo} &amp;&amp; !${view>/cfgBusy} }"/>
+              <Text text="{= ${app>/setup/GhRepo} ? ${i18n>savedRepo} + ' ' + ${app>/setup/GhRepo} : '' }" class="boltInlineMsg"/>
+            </HBox>
+          </VBox>
+        </Panel>
+
+        <!-- Global reference library (GlobalLibrary.jsx) -->
+        <Panel class="boltPanel" visible="{= ${app>/ready/repo} }">
+          <headerToolbar>
+            <Toolbar>
+              <Title text="{i18n>cfgLibrary}"/>
+              <ToolbarSpacer/>
+              <Text text="{app>/setup/LibFolder}" class="boltMuted"/>
+            </Toolbar>
+          </headerToolbar>
+          <VBox class="boltFields">
+            <Text text="{i18n>libHint}" class="boltHint"/>
+            <Label text="{i18n>libCategory}" labelFor="libCategory"/>
+            <Select id="libCategory" selectedKey="{view>/lib/Category}" enabled="{app>/isAdmin}" width="22rem">
+              <core:Item key="logo" text="{i18n>libLogo}"/>
+              <core:Item key="smartstyle" text="{i18n>libStyle}"/>
+              <core:Item key="naming_standard" text="{i18n>libNaming}"/>
+              <core:Item key="policy" text="{i18n>libPolicy}"/>
+            </Select>
+            <VBox id="libDrop" class="boltDrop">
+              <customData><core:CustomData key="bolt-drop" value="view|/lib/files" writeToDom="true"/></customData>
+              <HBox alignItems="Center" wrap="Wrap">
+                <core:Icon src="sap-icon://upload" class="boltDropIcon"/>
+                <Text text="{i18n>dropHere}" class="boltDropText"/>
+                <u:FileUploader buttonOnly="true" buttonText="{i18n>chooseFiles}" multiple="true" sameFilenameAllowed="true"
+                                change=".onLibFiles" enabled="{app>/isAdmin}" icon="sap-icon://attachment"/>
+              </HBox>
+              <List items="{path: 'view>/lib/files', templateShareable: false}" mode="Delete" delete=".onLibUnstage"
+                    visible="{= ${view>/lib/files}.length > 0 }" showNoData="false" class="boltStaged">
+                <StandardListItem title="{view>name}" info="{path: 'view>size', formatter: '.formatter.bytes'}" icon="sap-icon://document"/>
+              </List>
+            </VBox>
+            <Label text="{i18n>libProvenance}" labelFor="libProvenance"/>
+            <Input id="libProvenance" value="{view>/lib/Provenance}" editable="{app>/isAdmin}" placeholder="{i18n>libProvenancePlaceholder}"/>
+            <Button text="{= ${i18n>uploadTo} + ' ' + ${path: 'view>/lib/Category', formatter: '.libFolder'} }" type="Emphasized"
+                    press=".onLibUpload" class="sapUiTinyMarginTop"
+                    enabled="{= ${app>/isAdmin} &amp;&amp; ${view>/lib/files}.length > 0 &amp;&amp; !${view>/cfgBusy} }"/>
+            <Table items="{path: 'view>/library', templateShareable: false}" class="boltTable sapUiSmallMarginTop">
+              <noData>
+                <IllustratedMessage illustrationType="sapIllus-NoData" illustrationSize="Dot" title="{i18n>libEmpty}"/>
+              </noData>
+              <columns>
+                <Column width="10rem"><Text text="{i18n>libCategory}"/></Column>
+                <Column><Text text="{i18n>colFile}"/></Column>
+                <Column width="6rem" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>colSize}"/></Column>
+                <Column minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>libProvenance}"/></Column>
+                <Column width="9rem"><Text text="{i18n>colGitHub}"/></Column>
+                <Column width="4rem" hAlign="End"><Text text=""/></Column>
+              </columns>
+              <items>
+                <ColumnListItem>
+                  <cells>
+                    <Text text="{path: 'view>LibCategory', formatter: '.libFolder'}"/>
+                    <ObjectIdentifier title="{view>FileName}" text="{view>FilePath}"/>
+                    <Text text="{path: 'view>SizeBytes', formatter: '.formatter.bytes'}"/>
+                    <Text text="{view>Provenance}"/>
+                    <ObjectStatus text="{= ${view>Pushed} ? ${i18n>pushed} : ${i18n>notPushed} }"
+                                  state="{= ${view>Pushed} ? 'Success' : 'Warning' }" tooltip="{view>PushMsg}"/>
+                    <Button icon="sap-icon://delete" type="Transparent" tooltip="{i18n>libRemove}" press=".onLibRemove" visible="{app>/isAdmin}"/>
+                  </cells>
+                </ColumnListItem>
+              </items>
+            </Table>
+          </VBox>
+        </Panel>
+
+        <!-- Advanced: the SAP side of the connections and the conventions -->
+        <Panel headerText="{i18n>cfgAdvanced}" expandable="true" expanded="false" class="boltPanel">
+          <VBox class="boltFields">
+            <Text text="{i18n>cfgAdvancedHint}" class="boltHint"/>
+            <Label text="{i18n>cfgGhApiUrl}" labelFor="cfgApi"/>
+            <Input id="cfgApi" value="{view>/cfg/GhApiUrl}" editable="{app>/isAdmin}" placeholder="https://api.github.com"/>
+            <Label text="{i18n>cfgSslId}" labelFor="cfgSsl"/>
+            <Input id="cfgSsl" value="{view>/cfg/SslId}" editable="{app>/isAdmin}" placeholder="ANONYM" maxLength="6" width="10rem"/>
+            <Text text="{i18n>cfgSslHint}" class="boltHint"/>
+            <Label text="{i18n>cfgGhDest}" labelFor="cfgGhDest"/>
+            <Input id="cfgGhDest" value="{view>/cfg/GhDest}" editable="{app>/isAdmin}" placeholder="{i18n>optional}" maxLength="32" width="16rem"/>
+            <Label text="{i18n>cfgAiDest}" labelFor="cfgAiDest"/>
+            <Input id="cfgAiDest" value="{view>/cfg/AiDest}" editable="{app>/isAdmin}" placeholder="{i18n>optional}" maxLength="32" width="16rem"/>
+            <Text text="{i18n>cfgDestHint}" class="boltHint"/>
+            <Label text="{i18n>cfgStatusFolder}" labelFor="cfgStatusFolder"/>
+            <Input id="cfgStatusFolder" value="{view>/cfg/StatusFolder}" editable="{app>/isAdmin}" placeholder="docs/legacy_grab"/>
+            <Text text="{i18n>cfgStatusFolderHint}" class="boltHint"/>
+            <Label text="{i18n>cfgLibFolder}" labelFor="cfgLibFolder"/>
+            <Input id="cfgLibFolder" value="{view>/cfg/LibFolder}" editable="{app>/isAdmin}" placeholder="docs/global_data"/>
+            <Label text="{i18n>cfgPrefixes}" labelFor="cfgPrefixes"/>
+            <Input id="cfgPrefixes" value="{view>/cfg/FormPrefixes}" editable="{app>/isAdmin}" placeholder="Z,Y" width="10rem"/>
+            <CheckBox text="{i18n>cfgCountVolume}" selected="{view>/cfg/CountVolume}" editable="{app>/isAdmin}"/>
+            <Button text="{i18n>saveAdvanced}" press=".onSaveAdvanced" enabled="{= ${app>/isAdmin} &amp;&amp; !${view>/cfgBusy} }"
+                    class="sapUiSmallMarginTop"/>
+          </VBox>
+        </Panel>
+      </VBox>
+      </VBox>
+    </content>
+  </Page>
+</mvc:View>
