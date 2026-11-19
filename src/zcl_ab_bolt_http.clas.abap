@@ -1,6 +1,6 @@
 "! <p class="shorttext synchronized">Bolt - outbound HTTPS call (GitHub, AI provider)</p>
 "! One place for every outbound call. Two ways to reach the endpoint, both set
-"! on the Configuration tab:
+"! on the Setup page:
 "!   - URL (default): CL_HTTP_CLIENT=>CREATE_BY_URL with the SSL client
 "!     identity of the setup (ANONYM by default). The root certificate of the
 "!     endpoint must be in that PSE (STRUST); a proxy, if the system needs one,
@@ -99,7 +99,7 @@ CLASS zcl_ab_bolt_http IMPLEMENTATION.
     ELSE.
       DATA(lv_base) = condense( is_endpoint-base_url ).
       IF lv_base IS INITIAL.
-        RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `No address is configured for this connection - set it on the Configuration tab.` ).
+        RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = `No address is configured for this connection - set it on the Setup page.` ).
       ENDIF.
       WHILE strlen( lv_base ) > 1 AND substring( val = lv_base off = strlen( lv_base ) - 1 len = 1 ) = `/`.
         lv_base = substring( val = lv_base len = strlen( lv_base ) - 1 ).

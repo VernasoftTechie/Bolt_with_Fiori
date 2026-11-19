@@ -47,15 +47,19 @@
 
         <MessageStrip visible="{det>/superseded}" type="Information" showIcon="true" text="{i18n>supersededStrip}" class="sapUiSmallMarginTop"/>
 
-        <!-- ===== not on GitHub yet / send failed ===== -->
-        <MessageStrip visible="{= ${det>/mig/PushStatus} !== 'PUSHED' &amp;&amp; !${det>/superseded} }"
-                      type="{= ${det>/mig/PushStatus} === 'FAILED' ? 'Error' : 'Information' }" showIcon="true"
-                      text="{= ${det>/mig/PushStatus} === 'FAILED' ? ${i18n>sendFailedStrip} + ' ' + ${det>/mig/PushMsg} : ${i18n>notSentStrip} }"
-                      class="sapUiSmallMarginTop">
-          <link>
-            <Link text="{i18n>sendAgain}" press=".onSendAgain" visible="{= !${det>/stopped} }"/>
-          </link>
-        </MessageStrip>
+        <!-- ===== draft: committed, initial load not on GitHub yet ===== -->
+        <VBox visible="{= ${det>/mig/PushStatus} !== 'PUSHED' &amp;&amp; !${det>/superseded} &amp;&amp; !${det>/stopped} }"
+              class="boltDraftBanner sapUiSmallMarginTop">
+          <Title text="{i18n>draftTitle}" level="H4"/>
+          <Text text="{= ${det>/mig/PushStatus} === 'FAILED' ? ${i18n>draftFailed} + ' ' + ${det>/mig/PushMsg} : ${i18n>draftPending} }"
+                class="boltMsgText"/>
+          <HBox wrap="Wrap" class="boltButtons sapUiTinyMarginTop">
+            <Button text="{i18n>sendToGitHub}" icon="sap-icon://upload-to-cloud" type="Emphasized" press=".onSendAgain"/>
+            <Button text="{i18n>discardDraft}" icon="sap-icon://delete" press=".onDiscardDraft"/>
+          </HBox>
+        </VBox>
+        <MessageStrip visible="{= ${det>/mig/PushStatus} !== 'PUSHED' &amp;&amp; ${det>/stopped} &amp;&amp; !${det>/superseded} }"
+                      type="Information" showIcon="true" text="{i18n>draftDiscardedStrip}" class="sapUiSmallMarginTop"/>
 
         <!-- ===== complexity (ComplexityPanel.jsx) ===== -->
         <Panel class="boltPanel sapUiSmallMarginTop" visible="{= !!${det>/mig/Complexity} }">
@@ -156,8 +160,8 @@
           </VBox>
         </Panel>
 
-        <!-- ===== Legacy documents (Workspace.jsx) ===== -->
-        <Panel class="boltPanel sapUiSmallMarginTop">
+        <!-- ===== Legacy documents (Workspace.jsx) - only once the branch exists ===== -->
+        <Panel class="boltPanel sapUiSmallMarginTop" visible="{= ${det>/mig/PushStatus} === 'PUSHED' }">
           <headerToolbar>
             <Toolbar>
               <Title text="{i18n>legacyDocs}"/>

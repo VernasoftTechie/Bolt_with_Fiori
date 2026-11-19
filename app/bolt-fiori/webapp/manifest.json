@@ -13,7 +13,7 @@
     "title": "{{appTitle}}",
     "description": "{{appDescription}}",
     "applicationVersion": {
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     "dataSources": {
       "mainService": {
@@ -113,14 +113,24 @@
       },
       "routes": [
         {
-          "name": "dashboard",
-          "pattern": ":tab:",
-          "target": "dashboard"
+          "name": "setup",
+          "pattern": "setup",
+          "target": "setup"
+        },
+        {
+          "name": "help",
+          "pattern": "help/:section:",
+          "target": "help"
         },
         {
           "name": "detail",
           "pattern": "migration/{migUuid}",
           "target": "detail"
+        },
+        {
+          "name": "dashboard",
+          "pattern": ":tab:",
+          "target": "dashboard"
         }
       ],
       "targets": {
@@ -128,6 +138,16 @@
           "viewName": "Dashboard",
           "viewId": "dashboard",
           "viewLevel": 1
+        },
+        "setup": {
+          "viewName": "Setup",
+          "viewId": "setup",
+          "viewLevel": 2
+        },
+        "help": {
+          "viewName": "Help",
+          "viewId": "help",
+          "viewLevel": 2
         },
         "detail": {
           "viewName": "Detail",
