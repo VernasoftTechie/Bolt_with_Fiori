@@ -20,6 +20,8 @@ sap.ui.define([
         sys: {},
         setup: {},
         isAdmin: false,
+        sysError: "",
+        setupError: "",
         ready: { github: false, repo: false, ai: false, all: false }
       }), "app");
 
