@@ -252,7 +252,7 @@
                     </VBox>
                     <VBox visible="{= !${app>/ready/github} }">
                       <Label text="{i18n>cfgToken}" labelFor="cfgToken"/>
-                      <Input id="cfgToken" type="Password" value="{view>/token}" editable="{app>/isAdmin}"
+                      <Input id="cfgToken" type="Password" value="{view>/token}" valueLiveUpdate="true" editable="{app>/isAdmin}"
                              placeholder="github_pat_… or ghp_…" submit=".onConnectGitHub"/>
                       <Text text="{i18n>cfgTokenHint}" class="boltHint"/>
                       <Button text="{i18n>connect}" type="Emphasized" press=".onConnectGitHub"
@@ -282,7 +282,7 @@
                     </Select>
                     <VBox visible="{= ${view>/ai/Provider} !== 'mock' }">
                       <Label text="{= ${view>/ai/keySaved} ? ${i18n>cfgAiKeySaved} : ${i18n>cfgAiKey} }" labelFor="cfgAiKey"/>
-                      <Input id="cfgAiKey" type="Password" value="{view>/ai/ApiKey}" editable="{app>/isAdmin}"
+                      <Input id="cfgAiKey" type="Password" value="{view>/ai/ApiKey}" valueLiveUpdate="true" liveChange=".onAiKeyLive" editable="{app>/isAdmin}"
                              placeholder="{= ${view>/ai/keySaved} ? ${i18n>keyUnchanged} : ${i18n>cfgAiKeyPlaceholder} }"/>
                     </VBox>
                     <Label text="{i18n>cfgAiModel}" labelFor="cfgAiModel"/>
@@ -323,9 +323,9 @@
                 </headerToolbar>
                 <VBox class="boltFields">
                   <Label text="{i18n>cfgRepo}" labelFor="cfgRepo" required="true"/>
-                  <Input id="cfgRepo" value="{view>/repo/Repo}" editable="{app>/isAdmin}" placeholder="{i18n>cfgRepoPlaceholder}"/>
+                  <Input id="cfgRepo" value="{view>/repo/Repo}" valueLiveUpdate="true" editable="{app>/isAdmin}" placeholder="{i18n>cfgRepoPlaceholder}"/>
                   <Label text="{i18n>cfgBranchPrefix}" labelFor="cfgPrefix"/>
-                  <Input id="cfgPrefix" value="{view>/repo/BranchPrefix}" editable="{app>/isAdmin}" placeholder="vernasofttechie" liveChange=".onPrefixLive"/>
+                  <Input id="cfgPrefix" value="{view>/repo/BranchPrefix}" valueLiveUpdate="true" editable="{app>/isAdmin}" placeholder="vernasofttechie" liveChange=".onPrefixLive"/>
                   <Text text="{= ${i18n>cfgPrefixHint} + ' ' + ${path: 'view>/repo/BranchPrefix', formatter: '.formatter.branchExample'} }" class="boltHint"/>
                   <HBox wrap="Wrap" alignItems="Center" class="sapUiTinyMarginTop boltButtons">
                     <Button text="{i18n>checkAccess}" press=".onCheckRepo" enabled="{= ${app>/isAdmin} &amp;&amp; !!${view>/repo/Repo} &amp;&amp; !${view>/cfgBusy} }"/>
