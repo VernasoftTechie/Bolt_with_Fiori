@@ -80,7 +80,7 @@ sap.ui.define([
         var oStatus = aResults[1][0] || {};
         oDet.setProperty("/mig", oMig);
         oDet.setProperty("/status", Object.assign({}, oStatus, {
-          Found: formatter.isX(oStatus.Found), StopRequested: formatter.isX(oStatus.StopRequested)
+          StatusFound: formatter.isX(oStatus.StatusFound), StopRequested: formatter.isX(oStatus.StopRequested)
         }));
         oDet.setProperty("/timeline", aResults[2]);
         oDet.setProperty("/hist", aResults[3].map(function (o) { return Object.assign(o, { Stopped: formatter.isX(o.Stopped) }); }));
@@ -106,7 +106,7 @@ sap.ui.define([
       var oDet = this.getView().getModel("det");
       var oMig = oDet.getProperty("/mig") || {};
       var oStatus = oDet.getProperty("/status") || {};
-      var bFound = !!oStatus.Found;
+      var bFound = !!oStatus.StatusFound;
       var bDisabled = (bFound ? oStatus.MigStatus : oMig.MigStatus) === "completed";
       var bStopped = bFound ? !!oStatus.StopRequested : formatter.isX(oMig.Stopped);
       var sWaiting = bFound ? oStatus.WaitingOn : "";

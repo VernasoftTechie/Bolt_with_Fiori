@@ -3,7 +3,7 @@
 
 // The header of a migration's status file, read live from its GitHub branch
 // on every request - the communication texts are not stored in SAP.
-// Request with $filter=MigUuid eq <uuid>. Found = false: not on GitHub yet
+// Request with $filter=MigUuid eq <uuid>. StatusFound = false: not on GitHub yet
 // (or not readable - Message says why).
 
 define custom entity ZAB_CDS_CE_BOLT_STATUS
@@ -11,7 +11,7 @@ define custom entity ZAB_CDS_CE_BOLT_STATUS
       @EndUserText.label: 'Migration'
   key MigUuid       : sysuuid_x16;
       @EndUserText.label: 'Status file found'
-      Found         : abap_boolean;
+      StatusFound   : abap_boolean;
       @EndUserText.label: 'Status'
       MigStatus     : abap.char( 30 );
       @EndUserText.label: 'Status label'

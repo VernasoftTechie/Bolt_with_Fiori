@@ -82,7 +82,7 @@
           <Text text="{i18n>statusHint}" class="boltHint"/>
           <MessageStrip visible="{= !!${det>/notice} }" text="{det>/notice}" type="Success" showIcon="true" class="sapUiTinyMarginTop"/>
           <MessageStrip visible="{= !!${det>/error} }" text="{det>/error}" type="Error" showIcon="true" class="sapUiTinyMarginTop"/>
-          <MessageStrip visible="{= !${det>/status/Found} &amp;&amp; !!${det>/status/Message} }" text="{det>/status/Message}"
+          <MessageStrip visible="{= !${det>/status/StatusFound} &amp;&amp; !!${det>/status/Message} }" text="{det>/status/Message}"
                         type="Warning" showIcon="true" class="sapUiTinyMarginTop"/>
 
           <!-- Stopped banner, or the stop form -->

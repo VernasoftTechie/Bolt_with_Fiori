@@ -111,7 +111,7 @@ CLASS zcl_ab_bolt_q_status IMPLEMENTATION.
       ELSE.
         DATA(ls_status) = ls_cache-read-status.
         APPEND VALUE #( miguuid       = lv_uuid
-                        found         = ls_cache-read-found
+                        statusfound   = ls_cache-read-found
                         migstatus     = ls_status-status
                         statuslabel   = ls_status-label
                         updatedat     = ls_status-updated_at

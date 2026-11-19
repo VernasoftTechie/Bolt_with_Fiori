@@ -5,7 +5,7 @@
    <DDLS>
     <DDLNAME>ZAB_CDS_C_BOLT_FILE</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>Bolt - files on a migration branch (projection)</DDTEXT>
+    <DDTEXT>Bolt - branch files (projection)</DDTEXT>
     <SOURCE_TYPE>P</SOURCE_TYPE>
    </DDLS>
   </asx:values>
