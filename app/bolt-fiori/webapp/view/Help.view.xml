@@ -1,0 +1,32 @@
+<mvc:View
+  controllerName="vernasoft.boltfiori.controller.Help"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  height="100%"
+  displayBlock="true">
+
+  <!-- Help: sections on the left (with search), the selected section on the right.
+       Content: webapp/help/help.html - updated with every change of the app. -->
+  <Page id="helpPage" title="{i18n>helpTitle}" showNavButton="true" navButtonPress=".onNavBack" class="boltPage">
+    <content>
+      <FlexBox wrap="Wrap" alignItems="Start" class="boltLayout">
+        <VBox class="boltHelpNav">
+          <SearchField value="{help>/search}" liveChange=".onSearch" placeholder="{i18n>helpSearch}" width="100%"/>
+          <List items="{path: 'help>/shown', templateShareable: false}" mode="SingleSelectMaster"
+                selectionChange=".onSelect" class="sapUiTinyMarginTop" showNoData="true" noDataText="{i18n>helpNoHit}">
+            <StandardListItem title="{help>title}" selected="{= ${help>id} === ${help>/current} }"
+                              info="{= ${help>hits} > 0 ? String(${help>hits}) : '' }" infoState="Information"/>
+          </List>
+        </VBox>
+        <VBox class="boltHelpBody">
+          <FormattedText htmlText="{help>/html}" class="boltHelp"/>
+          <HBox justifyContent="SpaceBetween" class="sapUiSmallMarginTop">
+            <Button text="{i18n>helpPrev}" icon="sap-icon://navigation-left-arrow" press=".onPrev" visible="{= ${help>/index} > 0 }"/>
+            <Button text="{i18n>helpNext}" icon="sap-icon://navigation-right-arrow" iconFirst="false" press=".onNext"
+                    visible="{= ${help>/index} &lt; ${help>/count} - 1 }"/>
+          </HBox>
+        </VBox>
+      </FlexBox>
+    </content>
+  </Page>
+</mvc:View>
