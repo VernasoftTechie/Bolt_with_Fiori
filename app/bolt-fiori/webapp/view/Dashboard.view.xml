@@ -36,7 +36,12 @@
     </customHeader>
 
     <content>
-      <MessageStrip visible="{= !${app>/ready/all} }" type="Warning" showIcon="true"
+      <!-- A backend problem shows here; the header and the lists still load. -->
+      <MessageStrip visible="{= !!${app>/sysError} }" type="Error" showIcon="true" class="sapUiSmallMargin"
+                    text="{= ${i18n>sysErrorStrip} + ' ' + ${app>/sysError} }"/>
+      <MessageStrip visible="{= !!${app>/setupError} }" type="Error" showIcon="true" class="sapUiSmallMargin"
+                    text="{= ${i18n>setupErrorStrip} + ' ' + ${app>/setupError} }"/>
+      <MessageStrip visible="{= !${app>/ready/all} &amp;&amp; !${app>/setupError} }" type="Warning" showIcon="true"
                     class="sapUiSmallMargin" text="{i18n>notReadyStrip}">
         <link>
           <Link text="{i18n>openConfiguration}" press=".onOpenConfiguration"/>
