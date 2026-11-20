@@ -174,7 +174,7 @@
   <li><strong>STRUST</strong>: the root and intermediate certificates of <code>api.github.com</code> in the PSE of <em>Advanced - SSL client identity</em> (default <em>SSL Client Anonymous</em>), then SMICM - Exit Soft.</li>
   <li>A proxy, if needed: SICF - Client - Proxy Settings.</li>
   <li>Roles: S_SERVICE for the OData service group <code>ZAB_UI_BOLT_O4</code> for all users; <code>S_TABU_NAM</code> on table <code>ZABT_BOLT_SECRT</code> for Basis only.</li>
-  <li>Jobs: <code>ZABR_BOLT_SYNC</code> every 15 minutes, <code>ZABR_BOLT_DRIVER_INDEX</code> daily. Run the driver index once after installation - until then the Setup panel shows <em>Driver index not built</em> and only NACE drivers are known.</li>
+  <li>Jobs: <code>ZABR_BOLT_SYNC</code> every 15 minutes, <code>ZABR_BOLT_DRIVER_INDEX</code> daily. Run the driver index once after installation - until then the Setup panel shows <em>Driver index not built</em> and only NACE drivers are known (see <em>Glossary - Driver index</em>).</li>
 </ul>
 <h4>GitHub</h4>
 <ul>
@@ -188,7 +188,16 @@
 <!-- section:trouble|Troubleshooting -->
 <h3>Troubleshooting - messages and what to do</h3>
 <dl>
-  <dt>SSL handshake ... failed: SSSLERR_PEER_CERT_UNTRUSTED</dt><dd>SAP does not trust the server's certificate. Import its root + intermediate certificate in STRUST into the PSE named in the message (default SSL Client Anonymous), save, SMICM - Exit Soft, try again. If your certificates are in SSL Client Standard, set <em>Advanced - SSL client identity</em> to <code>DFAULT</code>.</dd>
+  <dt>SAP does not trust https://api.github.com yet (SSSLERR_PEER_CERT_UNTRUSTED)</dt><dd>
+<p>SAP's own certificate store (STRUST) has no certificate that vouches for GitHub's server certificate. A browser has these built in; SAP has not. Certificates added in SPROXY or in a browser do not count - only the PSE the app uses.</p>
+<ol>
+  <li><strong>Get the certificates.</strong> In a browser open <code>https://api.github.com</code> - padlock - <em>Connection is secure</em> - <em>Certificate is valid</em> - tab <em>Details</em>. The <em>Certificate hierarchy</em> shows three levels: the root (top), the intermediate (middle), <code>*.github.com</code> / <code>api.github.com</code> (bottom). Select the <strong>root</strong> - <em>Export</em> - save as <em>Base64-encoded ASCII, single certificate</em> (.cer/.crt). Repeat for the <strong>intermediate</strong>. The bottom one is not needed.</li>
+  <li><strong>STRUST</strong> - double-click the PSE the app uses: <em>SSL client SSL Client Anonymous</em> (unless <em>Setup - Advanced - SSL client identity</em> says otherwise; <code>DFAULT</code> = <em>SSL client SSL Client Standard</em>). If it has a red cross it does not exist yet: right-click - <em>Create</em> first.</li>
+  <li>At the bottom, <em>Import certificate</em> (icon under the certificate area) - choose the root file - <strong>Add to Certificate List</strong>. Repeat for the intermediate. Then <strong>Save</strong> (Ctrl+S). Importing without <em>Add to Certificate List</em> and <em>Save</em> changes nothing.</li>
+  <li><strong>SMICM</strong> - <em>Administration - ICM - Exit Soft - Global</em> (all application servers), wait until the ICM is running again.</li>
+  <li>Try <em>Connect</em> again. To test without the app: SM59 - new type G destination, host <code>api.github.com</code>, port 443, tab <em>Logon &amp; Security</em> - SSL <em>Active</em>, certificate list <em>ANONYM</em> - <em>Connection Test</em>. Any HTTP answer (even 404) means SSL works; the same SSSLERR means the certificates are not yet in that PSE.</li>
+</ol>
+<p>Still failing after this? Check that the import went into the PSE named in the message, that the ICM was restarted on every server, and ask Basis whether the system needs a proxy (then the error is usually a timeout instead).</p></dd>
   <dt>Connection refused / timeout</dt><dd>The system cannot reach the internet directly - set the proxy (SICF - Client - Proxy Settings) or an SM59 destination under <em>Advanced</em>.</dd>
   <dt>That token wasn't accepted by GitHub</dt><dd>Wrong, expired or incomplete token - create a new one and connect again.</dd>
   <dt>... the token cannot push / read-only</dt><dd>Give the token <em>Contents: Read and write</em> on the repository (or add the GitHub user as collaborator with write access).</dd>
@@ -222,6 +231,11 @@
 <dl>
   <dt>Branch</dt><dd>The migration's own line of work in the GitHub repository, <code>&lt;prefix&gt;-&lt;form&gt;</code> (<code>-r2</code>, <code>-r3</code> for re-process runs).</dd>
   <dt>Status file</dt><dd>The file on the branch where the engineer and you record every step; Bolt shows it as the timeline.</dd>
+  <dt>Driver index</dt><dd>
+<p>A Smart Form never prints on its own: a <em>driver program</em> reads the data and calls it. The engineer needs that program's source to rebuild the same logic for the Adobe Form, so it goes to GitHub with the legacy grab.</p>
+<p>Some drivers are easy to find: output-type printing is configured in NACE (table TNAPR names the program). Many are not - custom reports, function modules and enhancements that call the form directly through <code>SSF_FUNCTION_MODULE_NAME</code>, with no output type. The only way to find those is to read the source of every custom program and look for the form name next to that call (within 20 lines).</p>
+<p>Reading every custom program takes minutes, far too long for the Smart Forms list or a commit. Report <code>ZABR_BOLT_DRIVER_INDEX</code> does it once in the background and stores the result (table <code>ZABT_BOLT_DRVIX</code>: form - program). The app then only looks the form up.</p>
+<p>Without it, nothing breaks: the list and the legacy grab show NACE drivers only, so a form printed by a custom report shows no driver and the engineer gets no driver source for it. Run it once now (SE38, background is fine - prefixes default to the Setup page), then daily as job <code>Z_AB_DA_BOLT_DRIVER_INDEX</code> so new programs are found. The Setup card turns green once it has run.</p></dd>
   <dt>Legacy grab</dt><dd>The automatic description of the Smart Form (interface, windows, texts, conditions, driver programs, output types) the engineer builds from.</dd>
   <dt>Draft</dt><dd>A committed form whose initial load is not on GitHub yet.</dd>
   <dt>Re-process run</dt><dd>A fresh migration of a stopped form, on a new branch.</dd>
@@ -230,6 +244,10 @@
 
 <!-- section:whatsnew|What's new -->
 <h3>What's new</h3>
+<h4>2.1.1</h4>
+<ul>
+  <li>The certificate error now says exactly what to do (STRUST PSE by its STRUST name, Add to Certificate List, SMICM - Exit Soft) instead of being cut off; the help has the full procedure and explains the driver index.</li>
+</ul>
 <h4>2.1.0</h4>
 <ul>
   <li>New layout: the process on the left (1 Smart Forms, 2 Drafts, 3 Migrations), Setup and Help on the right; every number shown once.</li>
