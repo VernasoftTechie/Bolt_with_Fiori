@@ -158,14 +158,27 @@ CLASS zcl_ab_bolt_http IMPLEMENTATION.
       DATA lv_message TYPE string.
       lo_client->get_last_error( IMPORTING message = lv_message ).
       lo_client->close( EXCEPTIONS OTHERS = 1 ).
-      " SAP's SSL texts continue with internal trace parts after '#' - keep the reason only,
-      " so the reason and the fix fit into one message on the screen.
+      " SAP's SSL texts continue with internal trace parts (after '#', or a line
+      " 'SapSSL...()==...') - keep the reason only, so the reason and the fix fit
+      " into one message on the screen (200 characters).
       SPLIT lv_message AT '#' INTO lv_message DATA(lv_trace) ##NEEDED.
-      DATA(lv_pse) = COND string( WHEN is_endpoint-ssl_id IS INITIAL THEN `ANONYM` ELSE CONV string( is_endpoint-ssl_id ) ).
+      FIND FIRST OCCURRENCE OF `SapSSL` IN lv_message MATCH OFFSET DATA(lv_off).
+      IF sy-subrc = 0.
+        lv_message = substring( val = lv_message len = lv_off ).
+      ENDIF.
+      lv_message = condense( replace( val = lv_message regex = `\s+` with = ` ` occ = 0 ) ).
+      " The PSE as STRUST names it.
+      DATA(lv_pse) = SWITCH string( is_endpoint-ssl_id
+                                    WHEN space OR 'ANONYM' THEN `SSL client Anonymous`
+                                    WHEN 'DFAULT'          THEN `SSL client Standard`
+                                    ELSE |SSL client { is_endpoint-ssl_id }| ).
       RAISE EXCEPTION NEW zcx_ab_bolt(
-        iv_text = COND #( WHEN lv_message CS `SSL` OR lv_message CS `CERT`
-                          THEN |{ condense( lv_message ) }. Import the server's root + intermediate certificate in STRUST, PSE SSL client { lv_pse }, then restart the ICM.|
-                          ELSE |Call to { where( is_endpoint ) } failed: { condense( lv_message ) }. Check the network/proxy (SICF > Client > Proxy Settings).| ) ).
+        iv_text = COND #( WHEN lv_message CS `UNTRUSTED` OR lv_message CS `missing trust`
+                          THEN |SAP does not trust { where( is_endpoint ) } yet: import its root + intermediate certificate in STRUST, | &&
+                               |PSE "{ lv_pse }" (Add to Certificate List, Save), then SMICM > Exit Soft.|
+                          WHEN lv_message CS `SSL` OR lv_message CS `CERT`
+                          THEN |{ lv_message } - check STRUST, PSE "{ lv_pse }", then SMICM > Exit Soft.|
+                          ELSE |Call to { where( is_endpoint ) } failed: { lv_message }. Check the network/proxy (SICF > Client > Proxy Settings).| ) ).
     ENDIF.
 
     lo_client->response->get_status( IMPORTING code   = rs_response-code
