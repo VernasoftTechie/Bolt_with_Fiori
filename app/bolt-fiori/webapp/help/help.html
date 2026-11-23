@@ -165,6 +165,13 @@
   <dt>Smart Form name prefixes</dt><dd>One or two prefixes, comma separated (default <code>Z,Y</code>) - which forms the Smart Forms list shows.</dd>
   <dt>Count output volume</dt><dd>The legacy grab counts how often each output type printed (NACE, numbers only).</dd>
 </dl>
+<h4>Reset connections (administrators)</h4>
+<p>For a fresh start with new connections (another GitHub account or repository, another AI provider, a moved system). <strong>Reset all connections...</strong> at the bottom of the Setup page asks twice:</p>
+<ol>
+  <li>The first window lists what is removed - the GitHub token and the AI key (deleted from table <code>ZABT_BOLT_SECRT</code>), the GitHub connection, target repository, AI provider settings and the Advanced settings (back to the installation defaults in <code>ZABT_BOLT_SETUP</code>) - and what is kept. Two options: also clear the <em>client name and administrators</em>, also clear the <em>reference library list</em> (<code>ZABT_BOLT_LIB</code>; the files stay on GitHub). It warns when migrations or drafts are still open.</li>
+  <li>The second window is the final confirmation; <em>Cancel</em> is the default.</li>
+</ol>
+<p>Never removed: migrations, their status history and file lists, drafts, the driver index. Open migrations live on branches of the current repository - connect the same repository again to keep following them. After the reset enter the connections again as in <em>Setup page</em> above.</p>
 
 <!-- section:prereq|Before you start (prerequisites) -->
 <h3>Before you start - prerequisites</h3>
@@ -245,6 +252,10 @@
 
 <!-- section:whatsnew|What's new -->
 <h3>What's new</h3>
+<h4>2.1.5</h4>
+<ul>
+  <li><strong>Reset connections</strong> on the Setup page (administrators, two confirmations): removes the saved token and key and puts all connection settings back to the installation defaults, optionally also the client name / administrators and the library list.</li>
+</ul>
 <h4>2.1.4</h4>
 <ul>
   <li>Every open or refresh of a page reads the latest statuses from GitHub, and pages that stay open refresh themselves every 2 minutes (paused while you are typing, have forms ticked, a dialog open or the tab in the background).</li>

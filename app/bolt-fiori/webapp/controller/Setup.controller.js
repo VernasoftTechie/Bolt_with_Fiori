@@ -4,8 +4,9 @@ sap.ui.define([
   "sap/m/MessageBox",
   "sap/m/MessageToast",
   "vernasoft/boltfiori/model/formatter",
-  "sap/ui/model/Sorter"
-], function (BaseController, JSONModel, MessageBox, MessageToast, formatter, Sorter) {
+  "sap/ui/model/Sorter",
+  "sap/ui/core/Fragment"
+], function (BaseController, JSONModel, MessageBox, MessageToast, formatter, Sorter, Fragment) {
   "use strict";
 
   var DEFAULT_MODEL = { openai: "gpt-4o-mini", anthropic: "claude-sonnet-5-5", mock: "built-in" };
@@ -25,7 +26,8 @@ sap.ui.define([
               defaultModel: "built-in", currentText: "", testText: "", testOk: false },
         repo: { Repo: "", BranchPrefix: "", checkText: "", checkOk: false },
         lib: { Category: "logo", Provenance: "", files: [] },
-        library: []
+        library: [],
+        reset: { identity: false, library: false, openText: "" }
       }), "view");
       this.router().getRoute("setup").attachPatternMatched(this._onMatched, this);
       this.enableDropZones();
@@ -191,6 +193,63 @@ sap.ui.define([
             await that.service().action(that._setupPath(), "disconnectGitHub", {});
             that.showMessages();
             await that._afterSetup();
+          }, "view", "/cfgBusy");
+        }
+      });
+    },
+
+    // ---- Reset connections (two confirmations) ----
+
+    /** Confirmation 1: what is removed, the options, and the migrations still open on the current repository. */
+    onOpenReset: async function () {
+      var oView = this.getView().getModel("view");
+      oView.setProperty("/reset", { identity: false, library: false, openText: "" });
+      try {
+        var aMig = await this.service().list("/Migration");
+        var aCats = aMig.map(function (o) { return formatter.category(o); });
+        var iOpen = aCats.filter(function (c) { return c === "active" || c === "stopped"; }).length;
+        var iDrafts = aCats.filter(function (c) { return c === "draft"; }).length;
+        if (iOpen || iDrafts) { oView.setProperty("/reset/openText", this.i18n("resetOpenWarning", [iOpen, iDrafts])); }
+      } catch (e) {
+        // The list is only a warning; the reset itself does not need it.
+      }
+      if (!this._oResetDialog) {
+        this._oResetDialog = await Fragment.load({
+          id: this.getView().getId(), name: "vernasoft.boltfiori.fragment.ResetDialog", controller: this
+        });
+        this.getView().addDependent(this._oResetDialog);
+      }
+      this._oResetDialog.open();
+    },
+
+    onResetCancel: function () { this._oResetDialog.close(); },
+
+    /** Confirmation 2: final, cannot be undone; Cancel is the default button. */
+    onResetContinue: function () {
+      var that = this;
+      var oView = this.getView().getModel("view");
+      this._oResetDialog.close();
+      var sReset = this.i18n("resetNow");
+      MessageBox.warning(this.i18n("resetFinal"), {
+        title: this.i18n("resetTitle"),
+        actions: [sReset, MessageBox.Action.CANCEL],
+        emphasizedAction: MessageBox.Action.CANCEL,
+        contentWidth: "32rem",
+        styleClass: "boltMsgWrap",
+        onClose: function (sAction) {
+          if (sAction !== sReset) { return; }
+          that.withBusy(async function () {
+            await that.service().action(that._setupPath(), "flushSetup", {
+              ClearIdentity: oView.getProperty("/reset/identity") ? "X" : "",
+              ClearLibrary: oView.getProperty("/reset/library") ? "X" : ""
+            });
+            that.showMessages();
+            // Every card from the reset row; nothing typed earlier is kept.
+            oView.setProperty("/token", "");
+            await that.loadContext();
+            that.fillConfig();
+            that._aiDerived();
+            await that.loadLibrary();
           }, "view", "/cfgBusy");
         }
       });
