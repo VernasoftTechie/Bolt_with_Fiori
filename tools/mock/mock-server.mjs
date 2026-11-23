@@ -284,7 +284,7 @@ function sysInfo() {
   const admins = (s.AdminUsers || '').toUpperCase().split(',').map((x) => x.trim()).filter(Boolean);
   return { SystemId: SYSID, Client: '100', HostName: 's4d-app01 (example)', UserName: ME, CustomerName: s.CustomerName, SetupExists: true,
     IsAdmin: !admins.length || admins.includes(ME), AdminsDefined: admins.length > 0, GitHubReady: github, RepoReady: repo, AiReady: ai,
-    Live: github && repo && ai, RepoUrl: s.GhRepo ? `https://github.com/${s.GhRepo}` : '', IndexBuilt: true, AppVersion: '2.1.2 (mock)' };
+    Live: github && repo && ai, RepoUrl: s.GhRepo ? `https://github.com/${s.GhRepo}` : '', IndexBuilt: true, AppVersion: '2.1.3 (mock)' };
 }
 
 // --------------------------------------------------------------- helpers
