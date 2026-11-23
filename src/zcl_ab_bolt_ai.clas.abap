@@ -230,7 +230,13 @@ CLASS zcl_ab_bolt_ai IMPLEMENTATION.
                                             it_headers  = lt_headers
                                             iv_timeout  = 180 ).
     IF ls_resp-code <> 200.
-      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = |The AI provider answered HTTP { ls_resp-code }: { error_text( ls_resp-body ) }| ).
+      " 401/403 = the provider refused the key itself (SSL and network are fine) - say what to check.
+      RAISE EXCEPTION NEW zcx_ab_bolt( iv_text = COND #(
+        WHEN ls_resp-code = 401 OR ls_resp-code = 403
+        THEN |The AI provider refused the API key (HTTP { ls_resp-code }: { error_text( ls_resp-body ) }). | &&
+             |Paste the complete key again{ COND string( WHEN is_setup-ai_provider = zcl_ab_bolt_config=>gc_provider-anthropic
+                                                  THEN ` (starts with sk-ant-api03-)` ) } and check it is active with the provider.|
+        ELSE |The AI provider answered HTTP { ls_resp-code }: { error_text( ls_resp-body ) }| ) ).
     ENDIF.
 
     IF is_setup-ai_provider = zcl_ab_bolt_config=>gc_provider-anthropic.

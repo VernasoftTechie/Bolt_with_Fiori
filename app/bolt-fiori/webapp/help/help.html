@@ -198,6 +198,7 @@
   <li>Try <em>Connect</em> again. To test without the app: SM59 - new type G destination, host <code>api.github.com</code>, port 443, tab <em>Logon &amp; Security</em> - SSL <em>Active</em>, certificate list <em>ANONYM</em> - <em>Connection Test</em>. Any HTTP answer (even 404) means SSL works; the same SSSLERR means the certificates are not yet in that PSE.</li>
 </ol>
 <p>Still failing after this? Check that the import went into the PSE named in the message, that the ICM was restarted on every server, and ask Basis whether the system needs a proxy (then the error is usually a timeout instead).</p></dd>
+  <dt>The AI provider refused the API key (HTTP 401: invalid x-api-key)</dt><dd>The connection works (certificates are fine) - the provider does not accept the key. Usually the key was copied incompletely: an Anthropic key starts with <code>sk-ant-api03-</code> and is about 100 characters long; the console shows it only once, so create a new one if in doubt (console.anthropic.com - API keys - Create key). Also check that the key is not disabled and its workspace is active. An admin key (<code>sk-ant-admin01-</code>) cannot be used. HTTP 400 <em>credit balance too low</em> means the key is fine but the account needs credits; HTTP 404 on the model means the model name is wrong (e.g. <code>claude-sonnet-5-5</code>).</dd>
   <dt>Connection refused / timeout</dt><dd>The system cannot reach the internet directly - set the proxy (SICF - Client - Proxy Settings) or an SM59 destination under <em>Advanced</em>.</dd>
   <dt>That token wasn't accepted by GitHub</dt><dd>Wrong, expired or incomplete token - create a new one and connect again.</dd>
   <dt>... the token cannot push / read-only</dt><dd>Give the token <em>Contents: Read and write</em> on the repository (or add the GitHub user as collaborator with write access).</dd>
@@ -244,6 +245,10 @@
 
 <!-- section:whatsnew|What's new -->
 <h3>What's new</h3>
+<h4>2.1.2</h4>
+<ul>
+  <li>A refused AI key (HTTP 401/403) now says so and what to check, instead of only the HTTP code.</li>
+</ul>
 <h4>2.1.1</h4>
 <ul>
   <li>The certificate error now says exactly what to do (STRUST PSE by its STRUST name, Add to Certificate List, SMICM - Exit Soft) instead of being cut off; the help has the full procedure and explains the driver index.</li>
