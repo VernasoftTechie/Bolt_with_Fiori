@@ -42,7 +42,7 @@ files exactly as before.
 | **Communication panel** | *I've done this — confirm* (only while waiting on someone other than the engineer, and not stopped — the only thing that releases a WAITING_ON hand-off), *Report a problem / Ask a question / Request a change*, *Raise a concern* (also after completion), with several attachments pushed to `<branch>/concerns/<ms>/`. Headings, texts and status changes are those of the web app. | action `respond` |
 | **Stop / Resume** | STOP requested / none in the status file, with the reason; resume puts the migration back exactly where it was. Never sent to GitHub: a local stop. | actions `requestStop`, `resume` |
 | **Legacy documents** | Stage files to add and files to remove, then *Save changes*: added files are pushed to `<branch>/`, removed ones only leave the list (the branch is untouched). | action `saveLegacyDocs` |
-| **Setup page** | Client name (saved on leaving the field), administrators, GitHub token connect/disconnect, AI provider + test, target repository check/create/save, global reference library, advanced settings. Administrators only. | `Setup` actions, `Library` upload/delete |
+| **Setup page** | Client name (saved on leaving the field), administrators, GitHub token connect/disconnect, AI provider + test, target repository check/create/save, global reference library, advanced settings, **reset connections** (token + key deleted, settings back to the installation defaults; optional client name / admins and library list; two confirmations). Administrators only. | `Setup` actions incl. `flushSetup`, `Library` upload/delete |
 
 ## RAP design rules used
 

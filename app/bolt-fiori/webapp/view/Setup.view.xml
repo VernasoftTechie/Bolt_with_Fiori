@@ -237,6 +237,15 @@
                     class="sapUiSmallMarginTop"/>
           </VBox>
         </Panel>
+
+        <!-- Reset connections: removes the token and the key, settings back to the installation defaults (two confirmations) -->
+        <Panel headerText="{i18n>resetTitle}" expandable="true" expanded="false" class="boltPanel" visible="{app>/isAdmin}">
+          <VBox class="boltFields">
+            <Text text="{i18n>resetHint}" class="boltHint"/>
+            <Button text="{i18n>resetOpen}" icon="sap-icon://reset" type="Reject" press=".onOpenReset"
+                    enabled="{= ${app>/isAdmin} &amp;&amp; !${view>/cfgBusy} }" class="sapUiSmallMarginTop"/>
+          </VBox>
+        </Panel>
       </VBox>
       </VBox>
     </content>

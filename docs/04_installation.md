@@ -225,6 +225,10 @@ so the same app serves any client.
 7. **Check:** the Setup card on the dashboard shows green ticks for GitHub, repository and driver
    index, and the **LIVE** pill. (AI may stay blue *Built-in* — that is enough for migrations.)
    Forms committed before this point wait on the *Drafts* tab: send them now.
+8. **Later, new connections** (another GitHub account / repository / AI provider): Setup page ->
+   *Reset connections* -> *Reset all connections...* (two confirmations), then steps 2-7 again.
+   Migrations and their history are kept; connect the same repository again to keep following
+   the open ones.
 
 ---
 

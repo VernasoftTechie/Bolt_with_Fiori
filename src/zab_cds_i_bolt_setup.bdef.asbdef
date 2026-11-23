@@ -1,7 +1,7 @@
 managed with additional save implementation in class zbp_ab_bolt_setup unique;
 strict ( 2 );
 
-// One row per system (SetupId DEFAULT), maintained on the Configuration tab.
+// One row per system (SetupId DEFAULT), maintained on the Setup page.
 // Changes are for Bolt administrators only (ADMIN_USERS; blank = first set-up).
 // The GitHub token and the AI key go to ZABT_BOLT_SECRT in the saver and are
 // never returned - only GhTokenSet / AiKeySet say that one is stored.
@@ -29,6 +29,8 @@ etag master LocalChanged
   action saveRepo parameter ZAB_CDS_A_BOLT_REPO_P result [1] $self;
   action saveAi parameter ZAB_CDS_A_BOLT_AI_P result [1] $self;
   action testAi parameter ZAB_CDS_A_BOLT_AI_P result [1] $self;
+  // Reset connections: removes the GitHub token and AI key, settings back to the installation defaults.
+  action flushSetup parameter ZAB_CDS_A_BOLT_FLUSH_P result [1] $self;
 
   validation checkSettings on save { create; update; }
 
