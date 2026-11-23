@@ -12,10 +12,10 @@ sap.ui.define([
 
   var AI_LABEL = { openai: "OpenAI", anthropic: "Anthropic" };
 
-  // The list shows the status stored in SAP; it is read from GitHub by "Read statuses", by the
-  // job ZABR_BOLT_SYNC and - at most every 5 minutes - automatically when the dashboard opens.
-  var AUTO_READ_MS = 5 * 60 * 1000;
-  var iLastGitHubRead = 0;
+  // The lists show the status stored in SAP. It is read from GitHub whenever the dashboard is
+  // opened or refreshed, every 2 minutes while it stays open, by "Read statuses" and by the job
+  // ZABR_BOLT_SYNC. SAP reads one migration at most once a minute (ZCL_AB_BOLT_CONFIG=>gc_resync_secs),
+  // however many screens are open.
 
   /**
    * The dashboard: the process on the left (1 Smart Forms, 2 Drafts, 3 Migrations),
@@ -43,41 +43,66 @@ sap.ui.define([
       var sTab = (oEvent.getParameter("arguments") || {}).tab;
       if (sTab === "migration") { sTab = "migrations"; } // links of version 2.0
       if (sTab) { this.getView().getModel("view").setProperty("/tab", sTab); }
-      // Always current when coming back from a migration or from Setup.
+      // Always current when opened, refreshed, or when coming back from a migration or Setup.
       this.reload();
+      this.startAutoRefresh("dashboard", this._autoTick);
     },
 
-    reload: async function () {
+    /**
+     * Shows what SAP has at once, then reads the statuses from GitHub and shows them.
+     * bAuto (2-minute refresh): no busy indicators, and ticked forms are kept (the forms list is
+     * then not re-read).
+     */
+    reload: async function (bAuto) {
+      this._iAutoLast = Date.now();
+      var bForms = !bAuto || this._formsFree();
       await this.loadContext();
       this._sideTexts();
-      await Promise.all([this.loadForms(), this.loadMigrations()]);
-      this._autoReadStatuses();
+      await Promise.all([bForms ? this.loadForms(bAuto) : null, this.loadMigrations(bAuto)]);
+      if (await this._readStatuses()) {
+        await Promise.all([bForms && this._formsFree() ? this.loadForms(true) : null, this.loadMigrations(true)]);
+      }
     },
 
-    /** Reads the open migrations from GitHub in the background when the last read is older than 5 minutes. */
-    _autoReadStatuses: async function () {
+    /** 2-minute refresh: only when nothing is being done on the page (no ticked forms, no dialog, nothing busy). */
+    _autoTick: function () {
+      var oView = this.getView().getModel("view");
+      var bBusy = ["/formsBusy", "/migBusy", "/draftBusy", "/migReading"].some(function (s) { return oView.getProperty(s); });
+      if (bBusy || (this._oCommitDialog && this._oCommitDialog.isOpen())) {
+        this._iAutoLast = 0; // try again at the next check (15 s)
+        return;
+      }
+      this.reload(true);
+    },
+
+    /** Forms may be re-read only when none is ticked (a reload would lose the selection). */
+    _formsFree: function () {
+      return !this.getView().getModel("view").getProperty("/selectedCount");
+    },
+
+    /** Reads every open migration's status file from GitHub, quietly; true when it was read. */
+    _readStatuses: async function () {
       var oView = this.getView().getModel("view");
       var bOpen = (oView.getProperty("/migrations") || []).some(function (o) {
         return o.category === "active" || o.category === "stopped";
       });
-      if (!bOpen || !this.appModel().getProperty("/ready/repo") || Date.now() - iLastGitHubRead < AUTO_READ_MS) { return; }
-      iLastGitHubRead = Date.now();
+      if (!bOpen || !this.appModel().getProperty("/ready/repo")) { return false; }
       oView.setProperty("/migReading", true);
       try {
         await this.service().listAction("/Migration", "refreshAll", {});
         this.takeMessages();
         this._markGitHubRead();
-        await this.loadMigrations();
+        return true;
       } catch (oError) {
-        // Silent in the background: the label says so and "Read statuses" shows the reason.
+        // Quiet: the label says so and "Read statuses" shows the reason.
         oView.setProperty("/lastRefreshText", this.i18n("lastRefreshFailed"));
+        return false;
       } finally {
         oView.setProperty("/migReading", false);
       }
     },
 
     _markGitHubRead: function () {
-      iLastGitHubRead = Date.now();
       this.getView().getModel("view").setProperty("/lastRefreshText",
         this.i18n("lastRefresh", [new Date().toLocaleTimeString([], { timeStyle: "short" })]));
     },
@@ -111,9 +136,9 @@ sap.ui.define([
 
     // ================================ 1. Smart Forms ================================
 
-    loadForms: async function () {
+    loadForms: async function (bQuiet) {
       var oView = this.getView().getModel("view");
-      oView.setProperty("/formsBusy", true);
+      oView.setProperty("/formsBusy", !bQuiet);
       oView.setProperty("/formsError", "");
       try {
         var aForms = await this.service().list("/SmartForm");
@@ -132,6 +157,7 @@ sap.ui.define([
         oView.setProperty("/formsBusy", false);
       }
       this.applyFormFilter();
+      this._countSelected(); // a reloaded list has nothing ticked
     },
 
     applyFormFilter: function () {
@@ -382,9 +408,9 @@ sap.ui.define([
 
     // ================================ 3. Migrations ================================
 
-    loadMigrations: async function () {
+    loadMigrations: async function (bQuiet) {
       var oView = this.getView().getModel("view");
-      oView.setProperty("/migBusy", true);
+      oView.setProperty("/migBusy", !bQuiet);
       try {
         var aMig = await this.service().list("/Migration", { sorters: [new Sorter("SerialNo", true)] });
         this._setMigrations(aMig);
