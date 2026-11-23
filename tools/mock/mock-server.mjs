@@ -284,7 +284,7 @@ function sysInfo() {
   const admins = (s.AdminUsers || '').toUpperCase().split(',').map((x) => x.trim()).filter(Boolean);
   return { SystemId: SYSID, Client: '100', HostName: 's4d-app01 (example)', UserName: ME, CustomerName: s.CustomerName, SetupExists: true,
     IsAdmin: !admins.length || admins.includes(ME), AdminsDefined: admins.length > 0, GitHubReady: github, RepoReady: repo, AiReady: ai,
-    Live: github && repo && ai, RepoUrl: s.GhRepo ? `https://github.com/${s.GhRepo}` : '', IndexBuilt: true, AppVersion: '2.1.3 (mock)' };
+    Live: github && repo && ai, RepoUrl: s.GhRepo ? `https://github.com/${s.GhRepo}` : '', IndexBuilt: true, AppVersion: '2.1.4 (mock)' };
 }
 
 // --------------------------------------------------------------- helpers
@@ -557,7 +557,12 @@ async function runAction(set, keys, name, p, messages) {
     }
     case 'refreshAll': {
       const open = db.Migration.filter((m) => m.PushStatus === 'PUSHED' && !m.Superseded && m.MigStatus !== 'completed');
-      open.forEach((m) => { if (syncRow(m)) hist(m, 'STATUS', 'ENGINEER'); });
+      // Same shared throttle as ZBP_AB_BOLT_MIG: a status read in the last 60 s is not read again.
+      open.forEach((m) => {
+        if (m.LastSyncAt && Date.now() - Date.parse(m.LastSyncAt) < 60000) return;
+        if (syncRow(m)) hist(m, 'STATUS', 'ENGINEER');
+        m.LastSyncAt = iso();
+      });
       return { body: { value: open.map((m) => shape('Migration', m)) }, messages };
     }
     case 'refreshStatus':
