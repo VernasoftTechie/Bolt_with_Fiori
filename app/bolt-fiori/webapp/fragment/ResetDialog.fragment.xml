@@ -1,0 +1,22 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+  <!-- Reset connections, confirmation 1 of 2: exactly what is removed, the options, the open migrations. -->
+  <Dialog id="resetDialog" title="{i18n>resetTitle}" type="Message" state="Warning" contentWidth="36rem" class="boltMsgWrap">
+    <content>
+      <VBox class="sapUiSmallMargin">
+        <Text text="{i18n>resetIntro}" class="boltMsgText"/>
+        <FormattedText htmlText="{i18n>resetRemoves}" class="sapUiTinyMarginTop"/>
+        <FormattedText htmlText="{i18n>resetKeeps}" class="sapUiTinyMarginTop"/>
+        <CheckBox text="{i18n>resetIdentity}" selected="{view>/reset/identity}" class="sapUiSmallMarginTop" wrapping="true"/>
+        <CheckBox text="{i18n>resetLibrary}" selected="{view>/reset/library}" wrapping="true"/>
+        <MessageStrip visible="{= !!${view>/reset/openText} }" type="Warning" showIcon="true" class="sapUiSmallMarginTop"
+                      text="{view>/reset/openText}"/>
+      </VBox>
+    </content>
+    <beginButton>
+      <Button text="{i18n>resetContinue}" type="Reject" press=".onResetContinue"/>
+    </beginButton>
+    <endButton>
+      <Button text="{i18n>cancel}" press=".onResetCancel"/>
+    </endButton>
+  </Dialog>
+</core:FragmentDefinition>

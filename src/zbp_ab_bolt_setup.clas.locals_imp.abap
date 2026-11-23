@@ -11,6 +11,8 @@ CLASS lcl_buffer DEFINITION FINAL.
       ty_t_secret TYPE SORTED TABLE OF ty_secret WITH UNIQUE KEY secret_id.
 
     CLASS-DATA gt_pending TYPE ty_t_secret.
+    "! Reset connections asked to clear the global reference library list too.
+    CLASS-DATA gv_clear_library TYPE abap_bool.
 
     "! Blank value = remove the secret.
     CLASS-METHODS set
@@ -59,6 +61,9 @@ CLASS lhc_setup DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS testai FOR MODIFY
       IMPORTING keys FOR ACTION Setup~testAi RESULT result.
+
+    METHODS flushsetup FOR MODIFY
+      IMPORTING keys FOR ACTION Setup~flushSetup RESULT result.
 
     METHODS checksettings FOR VALIDATE ON SAVE
       IMPORTING keys FOR Setup~checkSettings.
@@ -126,7 +131,8 @@ CLASS lhc_setup IMPLEMENTATION.
                       %action-createRepo        = lv_admin
                       %action-saveRepo          = lv_admin
                       %action-saveAi            = lv_admin
-                      %action-testAi            = lv_admin ).
+                      %action-testAi            = lv_admin
+                      %action-flushSetup        = lv_admin ).
   ENDMETHOD.
 
 
@@ -547,6 +553,88 @@ CLASS lhc_setup IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD flushsetup.
+    " Reset connections (Setup page, after two confirmations): removes the GitHub token and the
+    " AI key (ZABT_BOLT_SECRT, in the saver) and puts every connection and advanced setting back
+    " to the installation defaults - the state of a new system, ready for new connections.
+    " Client name / administrators and the library list only when asked. Migrations, their
+    " history, the files lists and the driver index are business records and stay.
+    READ ENTITIES OF zab_cds_i_bolt_setup IN LOCAL MODE
+      ENTITY Setup ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_setup).
+
+    DATA ls_param TYPE zab_cds_a_bolt_flush_p.
+    DATA(ls_default) = zcl_ab_bolt_config=>default_setup( ).
+    LOOP AT lt_setup INTO DATA(ls_setup).
+      ls_param = VALUE #( keys[ SetupId = ls_setup-SetupId ]-%param OPTIONAL ).
+      DATA(lv_identity) = xsdbool( ls_param-ClearIdentity = abap_true ).
+      DATA(lv_library)  = xsdbool( ls_param-ClearLibrary = abap_true ).
+
+      lcl_buffer=>set( iv_secret_id = zcl_ab_bolt_config=>gc_secret-github_token iv_value = `` ).
+      lcl_buffer=>set( iv_secret_id = zcl_ab_bolt_config=>gc_secret-ai_key       iv_value = `` ).
+      IF lv_library = abap_true.
+        lcl_buffer=>gv_clear_library = abap_true.
+      ENDIF.
+
+      DATA(lv_customer) = ls_setup-CustomerName.
+      DATA(lv_admins)   = ls_setup-AdminUsers.
+      IF lv_identity = abap_true.
+        CLEAR: lv_customer, lv_admins.
+      ENDIF.
+
+      MODIFY ENTITIES OF zab_cds_i_bolt_setup IN LOCAL MODE
+        ENTITY Setup
+          UPDATE FIELDS ( CustomerName AdminUsers GhApiUrl GhDest SslId GhTokenSet GhLogin GhUserName GhScopes
+                          GhConnectedAt GhRepo GhBaseBranch GhBranchPfx GhPrivate GhCanPush GhCheckRes GhCheckMsg
+                          GhCheckedAt StatusFolder LibFolder AiProvider AiModel AiBaseUrl AiDest AiMaxTokens AiKeySet
+                          AiCheckRes AiCheckMsg AiCheckedAt FormPrefixes CountVolume )
+          WITH VALUE #( ( %tky          = ls_setup-%tky
+                          CustomerName  = lv_customer
+                          AdminUsers    = lv_admins
+                          GhApiUrl      = ls_default-gh_api_url
+                          GhDest        = ls_default-gh_dest
+                          SslId         = ls_default-ssl_id
+                          GhTokenSet    = abap_false
+                          GhLogin       = ``
+                          GhUserName    = ``
+                          GhScopes      = ``
+                          GhConnectedAt = 0
+                          GhRepo        = ``
+                          GhBaseBranch  = ``
+                          GhBranchPfx   = ls_default-gh_branch_pfx
+                          GhPrivate     = abap_false
+                          GhCanPush     = abap_false
+                          GhCheckRes    = ``
+                          GhCheckMsg    = ``
+                          GhCheckedAt   = 0
+                          StatusFolder  = ls_default-status_folder
+                          LibFolder     = ls_default-lib_folder
+                          AiProvider    = ls_default-ai_provider
+                          AiModel       = ``
+                          AiBaseUrl     = ``
+                          AiDest        = ls_default-ai_dest
+                          AiMaxTokens   = ls_default-ai_max_tokens
+                          AiKeySet      = abap_false
+                          AiCheckRes    = ``
+                          AiCheckMsg    = ``
+                          AiCheckedAt   = 0
+                          FormPrefixes  = ls_default-form_prefixes
+                          CountVolume   = ls_default-count_volume ) ).
+
+      DATA(lv_text) = |All connections were reset: GitHub token and AI key removed, settings back to the installation defaults| &&
+                      |{ COND string( WHEN lv_identity = abap_true THEN `, client name and administrators cleared` ) }| &&
+                      |{ COND string( WHEN lv_library = abap_true THEN `, library list cleared` ) }. Connect again on this page.|.
+      APPEND VALUE #( %tky = ls_setup-%tky
+                      %msg = msg( iv_severity = if_abap_behv_message=>severity-success iv_text = lv_text ) ) TO reported-setup.
+    ENDLOOP.
+
+    READ ENTITIES OF zab_cds_i_bolt_setup IN LOCAL MODE
+      ENTITY Setup ALL FIELDS WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_after).
+    result = VALUE #( FOR ls_after IN lt_after ( %tky = ls_after-%tky %param = CORRESPONDING #( ls_after ) ) ).
+  ENDMETHOD.
+
+
   METHOD checksettings.
     READ ENTITIES OF zab_cds_i_bolt_setup IN LOCAL MODE
       ENTITY Setup FIELDS ( AdminUsers FormPrefixes StatusFolder LibFolder ) WITH CORRESPONDING #( keys )
@@ -628,12 +716,17 @@ CLASS lsc_zab_cds_i_bolt_setup IMPLEMENTATION.
     IF lt_upsert IS NOT INITIAL.
       MODIFY zabt_bolt_secrt FROM TABLE @lt_upsert.
     ENDIF.
-    CLEAR lcl_buffer=>gt_pending.
+    " Reset connections with "also clear the library list": the list only - the files
+    " stay on the old repository's default branch.
+    IF lcl_buffer=>gv_clear_library = abap_true.
+      DELETE FROM zabt_bolt_lib.                         "#EC CI_NOWHERE
+    ENDIF.
+    CLEAR: lcl_buffer=>gt_pending, lcl_buffer=>gv_clear_library.
   ENDMETHOD.
 
 
   METHOD cleanup_finalize.
-    CLEAR lcl_buffer=>gt_pending.
+    CLEAR: lcl_buffer=>gt_pending, lcl_buffer=>gv_clear_library.
   ENDMETHOD.
 
 ENDCLASS.

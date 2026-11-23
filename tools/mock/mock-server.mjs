@@ -98,6 +98,7 @@ const ACTIONS = {
     initialize: { static: true, params: {}, returns: 'self' },
     connectGitHub: { params: { Token: S }, returns: 'self' },
     disconnectGitHub: { params: {}, returns: 'self' },
+    flushSetup: { params: { ClearIdentity: S, ClearLibrary: S }, returns: 'self' },
     checkRepo: { params: REPO_P, returns: 'self' },
     createRepo: { params: REPO_P, returns: 'self' },
     saveRepo: { params: REPO_P, returns: 'self' },
@@ -284,7 +285,7 @@ function sysInfo() {
   const admins = (s.AdminUsers || '').toUpperCase().split(',').map((x) => x.trim()).filter(Boolean);
   return { SystemId: SYSID, Client: '100', HostName: 's4d-app01 (example)', UserName: ME, CustomerName: s.CustomerName, SetupExists: true,
     IsAdmin: !admins.length || admins.includes(ME), AdminsDefined: admins.length > 0, GitHubReady: github, RepoReady: repo, AiReady: ai,
-    Live: github && repo && ai, RepoUrl: s.GhRepo ? `https://github.com/${s.GhRepo}` : '', IndexBuilt: true, AppVersion: '2.1.4 (mock)' };
+    Live: github && repo && ai, RepoUrl: s.GhRepo ? `https://github.com/${s.GhRepo}` : '', IndexBuilt: true, AppVersion: '2.1.5 (mock)' };
 }
 
 // --------------------------------------------------------------- helpers
@@ -415,6 +416,23 @@ async function runAction(set, keys, name, p, messages) {
         if (p.Token.length < 20) fail("That token wasn't accepted by GitHub. Copy a fresh token - it may be wrong, expired, or missing a character - and paste it again.");
         Object.assign(s, { GhTokenSet: true, GhLogin: 'VernasoftTechie', GhUserName: 'Vernasoft Techie', GhScopes: p.Token.startsWith('ghp_') ? 'repo' : '', GhConnectedAt: iso() });
         touch(s); messages.push(msg('Connected as VernasoftTechie (Vernasoft Techie).'));
+        return one(s);
+      }
+      case 'flushSetup': {
+        const identity = p.ClearIdentity === 'X';
+        const library = p.ClearLibrary === 'X';
+        Object.assign(s, {
+          CustomerName: identity ? '' : s.CustomerName, AdminUsers: identity ? '' : s.AdminUsers,
+          GhApiUrl: 'https://api.github.com', GhDest: '', SslId: 'ANONYM', GhTokenSet: false, GhLogin: '', GhUserName: '', GhScopes: '',
+          GhConnectedAt: null, GhRepo: '', GhBaseBranch: '', GhBranchPfx: 'vernasofttechie', GhPrivate: false, GhCanPush: false,
+          GhCheckRes: '', GhCheckMsg: '', GhCheckedAt: null, StatusFolder: 'docs/legacy_grab', LibFolder: 'docs/global_data',
+          AiProvider: 'mock', AiModel: '', AiBaseUrl: '', AiDest: '', AiMaxTokens: 4096, AiKeySet: false, AiCheckRes: '', AiCheckMsg: '',
+          AiCheckedAt: null, FormPrefixes: 'Z,Y', CountVolume: true,
+        });
+        if (library) db.Library.length = 0;
+        touch(s);
+        messages.push(msg('All connections were reset: GitHub token and AI key removed, settings back to the installation defaults'
+          + (identity ? ', client name and administrators cleared' : '') + (library ? ', library list cleared' : '') + '. Connect again on this page.'));
         return one(s);
       }
       case 'disconnectGitHub':

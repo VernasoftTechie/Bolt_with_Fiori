@@ -74,3 +74,9 @@ The same help is in the app: `app/bolt-fiori/webapp/help/help.html`. Keep the tw
 
 *Open setup* on the right. See `04_installation.md` part D. Only users listed under
 *Administrators* can change it; everybody can see it.
+
+**Reset connections** (bottom of the Setup page, administrators): for a fresh start with new
+connections. Two confirmations; removes the GitHub token and AI key (`ZABT_BOLT_SECRT`) and puts
+every connection and advanced setting back to the installation defaults (`ZABT_BOLT_SETUP`);
+optionally also the client name / administrators and the library list (`ZABT_BOLT_LIB`).
+Migrations, history, drafts and the driver index are never removed.
