@@ -78,11 +78,11 @@
 </dl>
 <h4>Filters</h4>
 <p><em>All</em>, <em>Needs me</em> (waiting on you - highlighted, and counted on the tab), <em>In progress</em>, <em>Stopped</em>, <em>Completed</em>. <em>Show replaced runs</em> also lists stopped runs that were re-processed.</p>
-<p>The list shows the status saved in SAP. It is read from GitHub automatically when you open the dashboard (at most every 5 minutes), by the background job every 15 minutes, and at once with <strong>Read statuses</strong>. <em>Read from GitHub hh:mm</em> next to the button is the time of the last read. Under the status date, <em>open 3 d</em> is the time since the form was committed (<em>took</em> for a completed migration). The spreadsheet button exports the list with dates (committed, picked up, completed) for progress analysis.</p>
+<p>The list shows the status saved in SAP. It is read from GitHub every time you open or refresh the dashboard (also the browser refresh), <strong>every 2 minutes while the page stays open</strong> (not while you have forms ticked or a dialog open, and not while the browser tab is in the background), by the background job every 15 minutes, and at once with <strong>Read statuses</strong>. SAP reads each migration at most once a minute, however many people have the app open, so GitHub's limit is never reached. <em>Read from GitHub hh:mm</em> next to the button is the time of the last read. Under the status date, <em>open 3 d</em> is the time since the form was committed (<em>took</em> for a completed migration). The spreadsheet button exports the list with dates (committed, picked up, completed) for progress analysis.</p>
 
 <!-- section:detail|A migration page -->
 <h3>A migration page</h3>
-<p>Opens from any list. <strong>Refresh</strong> reads the status file again.</p>
+<p>Opens from any list and always shows the status file as it is on GitHub now. While the page stays open it reads it again every 2 minutes - but never while you are typing an answer, have files staged or an action is running, so nothing you are writing is lost. <strong>Refresh</strong> reads it at once.</p>
 <h4>Header</h4>
 <p>Form, serial number, branch (link to GitHub), status, package, driver programs, output types, committed (when, by whom), sent to GitHub, picked up, completed, number of files. A complexity line follows when known.</p>
 <h4>Migration status - talking to the engineer</h4>
@@ -219,8 +219,8 @@
 <dl>
   <dt>ZABT_BOLT_SETUP</dt><dd>The Setup page (one row, <code>DEFAULT</code>).</dd>
   <dt>ZABT_BOLT_SECRT</dt><dd>GitHub token and AI key - encoded, never sent to the screen.</dd>
-  <dt>ZABT_BOLT_MIG</dt><dd>One row per migration: serial and run number, branch, sent state, status, waiting on, stop, picked up / stopped / completed dates, complexity, files count.</dd>
-  <dt>ZABT_BOLT_HIST</dt><dd>One row per event (status history) - no message texts.</dd>
+  <dt>ZABT_BOLT_MIG</dt><dd>One row per migration: serial and run number, branch, sent state, and the <strong>status read from the status file</strong> (status, waiting on, stop, picked up by, last status update, time of the last read), picked up / stopped / completed dates, complexity, files count. Updated at every read from GitHub.</dd>
+  <dt>ZABT_BOLT_HIST</dt><dd>One row per event and per status change found at a read (date, user, status, waiting on, stop) - the status history; no message texts.</dd>
   <dt>ZABT_BOLT_FILE</dt><dd>The files on each branch.</dd>
   <dt>ZABT_BOLT_LIB</dt><dd>The global reference library list.</dd>
   <dt>ZABT_BOLT_DRVIX</dt><dd>The driver program index.</dd>
@@ -245,6 +245,11 @@
 
 <!-- section:whatsnew|What's new -->
 <h3>What's new</h3>
+<h4>2.1.4</h4>
+<ul>
+  <li>Every open or refresh of a page reads the latest statuses from GitHub, and pages that stay open refresh themselves every 2 minutes (paused while you are typing, have forms ticked, a dialog open or the tab in the background).</li>
+  <li>SAP reads one migration at most once a minute however many screens refresh, so GitHub's call limit stays safe.</li>
+</ul>
 <h4>2.1.3</h4>
 <ul>
   <li>The Migrations list reads the statuses from GitHub by itself when you open the dashboard, so a migration picked up by the engineer no longer shows <em>Queued</em> until someone chooses <em>Read statuses</em>. The time shown is now the last GitHub read (it was the time the list was loaded).</li>
