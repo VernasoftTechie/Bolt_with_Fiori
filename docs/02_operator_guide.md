@@ -44,8 +44,10 @@ The same help is in the app: `app/bolt-fiori/webapp/help/help.html`. Keep the tw
   the engineer window), complexity, last status change and age.
 - Filters with counts: **Needs me** (waiting for your action — highlighted), *In progress, Stopped,
   Completed*. *Show replaced runs* adds the runs closed by a re-process.
-- **Read statuses** reads every open migration from GitHub now (the background job does it every
-  15 minutes anyway). *Export* saves the list.
+- The list shows the status saved in SAP. It is read from GitHub automatically when the dashboard
+  opens (at most every 5 minutes), by the background job every 15 minutes, and at once with
+  **Read statuses**; *Read from GitHub hh:mm* is the time of the last read. *open 3 d* under the
+  status date = time since the commit (*took* when completed). *Export* saves the list.
 
 ## 4. Work on one migration — click a row
 
