@@ -44,9 +44,13 @@ The same help is in the app: `app/bolt-fiori/webapp/help/help.html`. Keep the tw
   the engineer window), complexity, last status change and age.
 - Filters with counts: **Needs me** (waiting for your action — highlighted), *In progress, Stopped,
   Completed*. *Show replaced runs* adds the runs closed by a re-process.
-- The list shows the status saved in SAP. It is read from GitHub automatically when the dashboard
-  opens (at most every 5 minutes), by the background job every 15 minutes, and at once with
-  **Read statuses**; *Read from GitHub hh:mm* is the time of the last read. *open 3 d* under the
+- The list shows the status saved in SAP (`ZABT_BOLT_MIG`, changes as rows in `ZABT_BOLT_HIST`). It
+  is read from GitHub at every open / refresh of the dashboard, every 2 minutes while the page stays
+  open (paused while forms are ticked, a dialog is open or the tab is in the background), by the
+  background job every 15 minutes, and at once with **Read statuses**. SAP reads one migration at
+  most once a minute however many screens refresh (`ZCL_AB_BOLT_CONFIG=>gc_resync_secs`). The
+  migration page refreshes every 2 minutes too, never while an answer is being typed or files are
+  staged; *Read from GitHub hh:mm* is the time of the last read. *open 3 d* under the
   status date = time since the commit (*took* when completed). *Export* saves the list.
 
 ## 4. Work on one migration — click a row

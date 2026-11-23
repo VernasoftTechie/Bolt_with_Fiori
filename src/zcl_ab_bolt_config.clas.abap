@@ -43,6 +43,10 @@ CLASS zcl_ab_bolt_config DEFINITION
         anthropic TYPE zabt_bolt_setup-ai_provider VALUE 'anthropic',
       END OF gc_provider.
 
+    "! A migration's status file is read from GitHub at most once per this many seconds
+    "! (refreshAll), however many screens refresh - GitHub allows 5,000 calls per hour per token.
+    CONSTANTS gc_resync_secs TYPE i VALUE 60.
+
     CONSTANTS:
       BEGIN OF gc_push,
         pending TYPE zabt_bolt_mig-push_status VALUE 'PENDING',

@@ -45,6 +45,20 @@ sap.ui.define([
       this._sUuid = oEvent.getParameter("arguments").migUuid;
       this.getView().getModel("det").setData(blank());
       this.load();
+      this.startAutoRefresh("detail", this._autoTick);
+    },
+
+    /** 2-minute refresh of the live status, never while the user is writing, staging files or waiting for an action. */
+    _autoTick: function () {
+      var oDet = this.getView().getModel("det");
+      var bBusy = ["/busy", "/stopBusy", "/confirmBusy", "/busySend", "/docsBusy", "/aiBusy"].some(function (s) { return oDet.getProperty(s); });
+      var bEditing = !!String(oDet.getProperty("/text") || "").trim() || (oDet.getProperty("/msgFiles") || []).length > 0
+        || !!String(oDet.getProperty("/stopNote") || "").trim() || !!oDet.getProperty("/docs/dirty");
+      if (bBusy || bEditing) {
+        this._iAutoLast = 0; // try again at the next check (15 s)
+        return;
+      }
+      this.load(true);
     },
 
     onNavBack: function () {
@@ -63,11 +77,11 @@ sap.ui.define([
     },
 
     /** Reads the migration, its live status file + timeline, history and files. */
-    load: async function () {
+    load: async function (bQuiet) {
       var oDet = this.getView().getModel("det");
       var oService = this.service();
       var sPath = service.migPath(this._sUuid);
-      oDet.setProperty("/busy", true);
+      oDet.setProperty("/busy", !bQuiet);
       try {
         var aFilter = [new Filter("MigUuid", FilterOperator.EQ, this._sUuid)];
         var aResults = await Promise.all([

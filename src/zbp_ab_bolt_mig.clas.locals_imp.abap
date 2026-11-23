@@ -577,7 +577,20 @@ CLASS lhc_migration IMPLEMENTATION.
       RESULT DATA(lt_mig).
 
     DATA lv_errors TYPE i.
+    DATA(lv_now) = zcl_ab_bolt_config=>now( ).
     LOOP AT lt_mig INTO DATA(ls_mig).
+      " Shared throttle: a status read in the last minute (by another user, a screen's
+      " 2-minute refresh or the job) is not read again - keeps GitHub's rate limit
+      " (5,000 calls per hour per token) safe however many screens are open.
+      IF ls_mig-LastSyncAt IS NOT INITIAL.
+        TRY.
+            IF cl_abap_tstmp=>subtract( tstmp1 = lv_now tstmp2 = ls_mig-LastSyncAt ) < zcl_ab_bolt_config=>gc_resync_secs.
+              CONTINUE.
+            ENDIF.
+          CATCH cx_parameter_invalid ##NO_HANDLER.
+            " unreadable time stamp - read the status
+        ENDTRY.
+      ENDIF.
       TRY.
           apply_read( is_mig = ls_mig is_read = zcl_ab_bolt_mig_svc=>read_status( to_svc( ls_mig ) ) ).
         CATCH zcx_ab_bolt INTO DATA(lx_error).
