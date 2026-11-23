@@ -12,7 +12,7 @@ CLASS zcl_ab_bolt_q_sysinfo DEFINITION
   PUBLIC SECTION.
     INTERFACES if_rap_query_provider.
 
-    CONSTANTS gc_version TYPE c LENGTH 20 VALUE '2.1.4'.
+    CONSTANTS gc_version TYPE c LENGTH 20 VALUE '2.1.5'.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
