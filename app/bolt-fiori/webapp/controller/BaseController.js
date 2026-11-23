@@ -194,6 +194,38 @@ sap.ui.define([
       return JSON.stringify(aRead.map(function (o) { return { name: o.name, content: o.content }; }));
     },
 
-    acceptList: function () { return ACCEPT.join(","); }
+    acceptList: function () { return ACCEPT.join(","); },
+
+    /**
+     * Keeps a page current while it is open: runs fnRefresh every 2 minutes while the route is shown
+     * and the browser tab is visible, and at once when the tab becomes visible again after 2 minutes.
+     * fnRefresh decides itself whether it may run now (nothing typed, staged or busy).
+     */
+    startAutoRefresh: function (sRoute, fnRefresh) {
+      var that = this;
+      var INTERVAL = 2 * 60 * 1000;
+      this._iAutoLast = Date.now();
+      var fnTick = function () {
+        if (document.hidden || Date.now() - that._iAutoLast < INTERVAL - 1000) { return; }
+        that._iAutoLast = Date.now();
+        fnRefresh.call(that);
+      };
+      if (!this._bAutoWired) {
+        this._bAutoWired = true;
+        // Stop when another page is shown; the page's own route match starts it again.
+        this.router().attachRouteMatched(function (oEvent) {
+          if (oEvent.getParameter("name") !== sRoute) { that.stopAutoRefresh(); }
+        });
+        document.addEventListener("visibilitychange", function () {
+          if (!document.hidden && that._iAutoTimer) { fnTick(); }
+        });
+      }
+      this.stopAutoRefresh();
+      this._iAutoTimer = setInterval(fnTick, 15000);
+    },
+
+    stopAutoRefresh: function () {
+      if (this._iAutoTimer) { clearInterval(this._iAutoTimer); this._iAutoTimer = null; }
+    }
   });
 });
