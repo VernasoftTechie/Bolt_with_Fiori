@@ -12,6 +12,11 @@ sap.ui.define([
 
   var AI_LABEL = { openai: "OpenAI", anthropic: "Anthropic" };
 
+  // The list shows the status stored in SAP; it is read from GitHub by "Read statuses", by the
+  // job ZABR_BOLT_SYNC and - at most every 5 minutes - automatically when the dashboard opens.
+  var AUTO_READ_MS = 5 * 60 * 1000;
+  var iLastGitHubRead = 0;
+
   /**
    * The dashboard: the process on the left (1 Smart Forms, 2 Drafts, 3 Migrations),
    * Setup and Help on the right. Setup itself is its own page (Setup.controller.js).
@@ -46,6 +51,35 @@ sap.ui.define([
       await this.loadContext();
       this._sideTexts();
       await Promise.all([this.loadForms(), this.loadMigrations()]);
+      this._autoReadStatuses();
+    },
+
+    /** Reads the open migrations from GitHub in the background when the last read is older than 5 minutes. */
+    _autoReadStatuses: async function () {
+      var oView = this.getView().getModel("view");
+      var bOpen = (oView.getProperty("/migrations") || []).some(function (o) {
+        return o.category === "active" || o.category === "stopped";
+      });
+      if (!bOpen || !this.appModel().getProperty("/ready/repo") || Date.now() - iLastGitHubRead < AUTO_READ_MS) { return; }
+      iLastGitHubRead = Date.now();
+      oView.setProperty("/migReading", true);
+      try {
+        await this.service().listAction("/Migration", "refreshAll", {});
+        this.takeMessages();
+        this._markGitHubRead();
+        await this.loadMigrations();
+      } catch (oError) {
+        // Silent in the background: the label says so and "Read statuses" shows the reason.
+        oView.setProperty("/lastRefreshText", this.i18n("lastRefreshFailed"));
+      } finally {
+        oView.setProperty("/migReading", false);
+      }
+    },
+
+    _markGitHubRead: function () {
+      iLastGitHubRead = Date.now();
+      this.getView().getModel("view").setProperty("/lastRefreshText",
+        this.i18n("lastRefresh", [new Date().toLocaleTimeString([], { timeStyle: "short" })]));
     },
 
     /** The AI line of the Setup panel (blue built-in / green tested provider / red). */
@@ -370,10 +404,11 @@ sap.ui.define([
         // Waiting on comes from the status file - meaningless until the migration is on GitHub.
         o.waitingText = o.PushStatus === "PUSHED" && !formatter.isX(o.Superseded) ? formatter.waitingText(o.WaitingOn) : "";
         o.isStopped = formatter.isX(o.Stopped);
-        o.ageText = formatter.ageText(o);
+        // Time since the commit (open) or from commit to completion (took).
+        o.ageText = formatter.ageText(o) ? this.i18n(formatter.isCompleted(o) ? "ageTook" : "ageOpen", [formatter.ageText(o)]) : "";
         o.ageState = formatter.ageState(o);
         o.category = formatter.category(o);
-      });
+      }, this);
       var aDrafts = aMig.filter(function (o) { return o.category === "draft"; })
         .sort(function (a, b) { return a.SerialNo - b.SerialNo; });
       // The Migrations tab: everything except open drafts (a discarded draft is "stopped").
@@ -387,7 +422,6 @@ sap.ui.define([
       ["active", "stopped", "completed"].forEach(function (sCat) {
         oView.setProperty("/counts/" + sCat, aLive.filter(function (o) { return o.category === sCat; }).length);
       });
-      oView.setProperty("/lastRefreshText", this.i18n("lastRefresh", [new Date().toLocaleTimeString([], { timeStyle: "short" })]));
       this.applyMigrationFilter();
     },
 
@@ -421,6 +455,7 @@ sap.ui.define([
       var that = this;
       await this.withBusy(async function () {
         var aRefreshed = await that.service().listAction("/Migration", "refreshAll", {});
+        that._markGitHubRead();
         that.showMessages(that.i18n("statusesRead", [aRefreshed.length]));
         await that.loadMigrations();
       }, "view", "/migBusy");
