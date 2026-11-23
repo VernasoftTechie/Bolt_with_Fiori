@@ -170,7 +170,7 @@
                   <SearchField value="{view>/migSearch}" liveChange=".onMigrationSearch" width="22rem" placeholder="{i18n>searchMigrations}"/>
                   <ToolbarSpacer/>
                   <CheckBox text="{i18n>showReplaced}" selected="{view>/showReplaced}" select=".onMigrationFilter"/>
-                  <Text text="{view>/lastRefreshText}" class="boltMuted"/>
+                  <Text text="{= ${view>/migReading} ? ${i18n>readingStatuses} : ${view>/lastRefreshText} }" class="boltMuted"/>
                   <Button icon="sap-icon://excel-attachment" tooltip="{i18n>exportMigrations}" press=".onExportMigrations" type="Transparent"/>
                   <Button text="{i18n>refreshStatuses}" icon="sap-icon://refresh" press=".onRefreshStatuses">
                     <layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
